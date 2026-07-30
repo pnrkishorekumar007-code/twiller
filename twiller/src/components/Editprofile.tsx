@@ -77,7 +77,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
     formdataimg.set("image", image);
     try {
       const res = await axios.post(
-        "https://api.imgbb.com/1/upload?key=97f3fb960c3520d6a88d7e29679cf96f",
+        "https://api.imgbb.com/1/upload?key=f21cc2cae66e4437ae46a874e6ea327c",
         formdataimg
       );
       const url = res.data.data.display_url;
@@ -151,7 +151,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
               <div className="absolute -bottom-16 left-4">
                 <div className="relative">
                   <Avatar className="h-32 w-32 border-4 border-black">
-                    <AvatarImage src={user?.avatar} alt={user?.displayName} />
+                    <AvatarImage src={formData.avatar} alt={user?.displayName} />
                     <AvatarFallback className="text-2xl">
                       {user?.displayName?.[0]}
                     </AvatarFallback>
