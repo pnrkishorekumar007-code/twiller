@@ -10,11 +10,11 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("Twiller backend is running successfully");
+  res.send("Tiller backend is running successfully");
 });
 
 const port = process.env.PORT || 5000;
-const url = process.env.MONOGDB_URL;
+const url = process.env.MONGODB_URL;
 
 mongoose
   .connect(url)
@@ -59,7 +59,7 @@ app.get("/loggedinuser", async (req, res) => {
   }
 });
 // update Profile
-app.patch("/userupdate/:email", async (req, res) => {
+app.patch("/userdata/:email", async (req, res) => {
   try {
     const { email } = req.params;
     const updated = await User.findOneAndUpdate(
@@ -94,10 +94,10 @@ app.get("/post", async (req, res) => {
   }
 });
 //  LIKE TWEET
-app.post("/like/:tweetid", async (req, res) => {
+app.post("/like/:tweeted", async (req, res) => {
   try {
     const { userId } = req.body;
-    const tweet = await Tweet.findById(req.params.tweetid);
+    const tweet = await Tweet.findById(req.params.tweeted);
     if (!tweet.likedBy.includes(userId)) {
       tweet.likes += 1;
       tweet.likedBy.push(userId);
@@ -109,10 +109,10 @@ app.post("/like/:tweetid", async (req, res) => {
   }
 });
 // retweet 
-app.post("/retweet/:tweetid", async (req, res) => {
+app.post("/retweet/:tweeted", async (req, res) => {
   try {
     const { userId } = req.body;
-    const tweet = await Tweet.findById(req.params.tweetid);
+    const tweet = await Tweet.findById(req.params.tweeted);
     if (!tweet.retweetedBy.includes(userId)) {
       tweet.retweets += 1;
       tweet.retweetedBy.push(userId);
