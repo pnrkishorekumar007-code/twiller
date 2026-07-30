@@ -1,5 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
-import React, { useState } from "react";
+import { db, storage } from "@/context/firebase";
+import React, { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Camera, LinkIcon, MapPin, X } from "lucide-react";
@@ -8,58 +9,80 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import LoadingSpinner from "./loading-spinner";
-import axios from "axios";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import axiosInstance from "@/lib/axiosInstance";
+
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_SIZE = 5 * 1024 * 1024;
+const MAX_DIM = 512;
+
+function compressImage(file: File, maxDim: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const ratio = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Image compression failed"));
+        },
+        file.type,
+        0.85
+      );
+    };
+    img.onerror = () => reject(new Error("Failed to load image"));
+    img.src = URL.createObjectURL(file);
+  });
+}
 
 const Editprofile = ({ isopen, onclose }: any) => {
-  const { user, updateProfile } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, setUser } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormdata] = useState({
     displayName: user?.displayName || "",
     bio: user?.bio || "",
-    location: "Earth",
-    website: "example.com",
+    location: user?.location || "",
+    website: user?.website || "",
     avatar: user?.avatar || "",
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<any>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const saveLockRef = useRef(false);
+
   if (!isopen || !user) return null;
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.displayName.trim()) {
       newErrors.displayName = "Display name is required";
     } else if (formData.displayName.length > 50) {
       newErrors.displayName = "Display name must be 50 characters or less";
     }
-
     if (formData.bio.length > 160) {
       newErrors.bio = "Bio must be 160 characters or less";
     }
-
     if (formData.website && formData.website.length > 100) {
       newErrors.website = "Website must be 100 characters or less";
     }
-
     if (formData.location && formData.location.length > 30) {
       newErrors.location = "Location must be 30 characters or less";
     }
-
     setError(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm() || isLoading) return;
-
-    setIsLoading(true);
-    try {
-      await updateProfile(formData);
-      onclose();
-    } catch (error) {
-      setError({ general: "Failed to update profile. Please try again." });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -69,27 +92,126 @@ const Editprofile = ({ isopen, onclose }: any) => {
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    setIsLoading(true);
-    const image = e.target.files[0];
-    const formdataimg = new FormData();
-    formdataimg.set("image", image);
+  const validateImage = (file: File): string | null => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return "Only JPG, PNG, and WebP images are allowed.";
+    }
+    if (file.size > MAX_SIZE) {
+      return "Image must be under 5MB.";
+    }
+    return null;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError({});
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateImage(file);
+    if (validationError) {
+      setError({ avatar: validationError });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setSelectedFile(file);
+    const localUrl = URL.createObjectURL(file);
+    setPreviewUrl(localUrl);
+    setFormdata((prev) => ({ ...prev, avatar: localUrl }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm() || saving || saveLockRef.current) return;
+    saveLockRef.current = true;
+    setSaving(true);
+    setUploadProgress(0);
+    setError({});
+
+    console.log("Save Started");
     try {
-      const res = await axios.post(
-        "https://api.imgbb.com/1/upload?key=f21cc2cae66e4437ae46a874e6ea327c",
-        formdataimg
-      );
-      const url = res.data.data.display_url;
-      if (url) {
-        setFormdata((prev) => ({ ...prev, avatar: url }));
+      let photoURL = formData.avatar;
+
+      if (selectedFile) {
+        console.log("Image Upload Started");
+        const compressed = await compressImage(selectedFile, MAX_DIM);
+        const timestamp = Date.now();
+        const storageRef = ref(storage, `users/${user._id}/profile/profile-${timestamp}`);
+        const uploadTask = uploadBytesResumable(storageRef, compressed, {
+          contentType: selectedFile.type,
+        });
+
+        photoURL = await new Promise<string>((resolve, reject) => {
+          uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+              const pct = Math.round(
+                (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+              );
+              setUploadProgress(pct);
+            },
+            (err) => {
+              reject(new Error(`Upload failed: ${err.message}`));
+            },
+            async () => {
+              try {
+                const url = await getDownloadURL(uploadTask.snapshot.ref);
+                console.log("Image Upload Completed");
+                console.log("Download URL Generated");
+                resolve(url);
+              } catch (err) {
+                reject(err);
+              }
+            }
+          );
+        });
       }
-    } catch (error) {
-      console.log(error);
+
+      console.log("Firestore Update Started");
+      const userDocRef = doc(db, "users", user._id);
+      await updateDoc(userDocRef, {
+        displayName: formData.displayName,
+        username: user.username,
+        bio: formData.bio,
+        photoURL,
+        updatedAt: serverTimestamp(),
+      });
+      console.log("Firestore Update Completed");
+
+      console.log("Backend Sync Started");
+      const updatedData = {
+        displayName: formData.displayName,
+        bio: formData.bio,
+        location: formData.location,
+        website: formData.website,
+        avatar: photoURL,
+      };
+      await axiosInstance.patch(`/userdata/${user.email}`, updatedData);
+      console.log("Backend Sync Completed");
+
+      const updatedUser = {
+        ...user,
+        displayName: formData.displayName,
+        bio: formData.bio,
+        location: formData.location,
+        website: formData.website,
+        avatar: photoURL,
+      };
+      setUser(updatedUser);
+      localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
+
+      console.log("Profile Update Successful");
+      onclose();
+    } catch (err: any) {
+      console.error("Profile Update Failed:", err);
+      setError({ general: err.message || "Failed to update profile. Please try again." });
     } finally {
-      setIsLoading(false);
+      setSaving(false);
+      setUploadProgress(0);
+      saveLockRef.current = false;
     }
   };
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-2xl bg-black border-gray-800 text-white max-h-[90vh] overflow-y-auto">
@@ -101,7 +223,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
                 size="icon"
                 className="text-white bg-black hover:bg-gray-900"
                 onClick={onclose}
-                disabled={isLoading}
+                disabled={saving}
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -111,12 +233,14 @@ const Editprofile = ({ isopen, onclose }: any) => {
               type="submit"
               form="edit-profile-form"
               className="bg-white text-black hover:bg-gray-200 font-semibold rounded-full px-6"
-              disabled={isLoading}
+              disabled={saving}
             >
-              {isLoading ? (
+              {saving ? (
                 <div className="flex items-center space-x-2">
                   <LoadingSpinner size="sm" />
-                  <span>Saving...</span>
+                  <span>
+                    {uploadProgress > 0 ? `${uploadProgress}%` : "Saving..."}
+                  </span>
                 </div>
               ) : (
                 "Save"
@@ -133,7 +257,6 @@ const Editprofile = ({ isopen, onclose }: any) => {
           )}
 
           <form id="edit-profile-form" onSubmit={handleSubmit}>
-            {/* Cover Photo */}
             <div className="relative">
               <div className="h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative">
                 <Button
@@ -141,37 +264,38 @@ const Editprofile = ({ isopen, onclose }: any) => {
                   variant="ghost"
                   size="sm"
                   className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-3 rounded-full bg-black/70 hover:bg-black/90"
-                  disabled={isLoading}
+                  disabled={saving}
                 >
                   <Camera className="h-6 w-6 text-white" />
                 </Button>
               </div>
 
-              {/* Profile Picture */}
               <div className="absolute -bottom-16 left-4">
                 <div className="relative">
                   <Avatar className="h-32 w-32 border-4 border-black">
-                    <AvatarImage src={formData.avatar} alt={user?.displayName} />
+                    <AvatarImage
+                      src={previewUrl || formData.avatar}
+                      alt={user?.displayName}
+                    />
                     <AvatarFallback className="text-2xl">
                       {user?.displayName?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     id="avatarUpload"
+                    ref={fileInputRef}
                     className="hidden"
-                    onChange={handlePhotoUpload}
+                    onChange={handleFileSelect}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-3 rounded-full bg-black/70 hover:bg-black/90"
-                    disabled={isLoading}
-                    onClick={() =>
-                      document.getElementById("avatarUpload")?.click()
-                    }
+                    disabled={saving}
+                    onClick={() => fileInputRef.current?.click()}
                   >
                     <Camera className="h-5 w-5 text-white" />
                   </Button>
@@ -179,8 +303,22 @@ const Editprofile = ({ isopen, onclose }: any) => {
               </div>
             </div>
 
+            {error.avatar && (
+              <p className="text-red-400 text-sm px-4 pt-2">{error.avatar}</p>
+            )}
+
+            {uploadProgress > 0 && (
+              <div className="px-4 pt-2">
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="p-4 mt-16 space-y-6">
-              {/* Display Name */}
               <div className="space-y-2">
                 <Label htmlFor="displayName" className="text-white">
                   Name
@@ -195,7 +333,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
                   className="bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
                   placeholder="Your display name"
                   maxLength={50}
-                  disabled={isLoading}
+                  disabled={saving}
                 />
                 <div className="flex justify-between text-sm">
                   {error.displayName && (
@@ -207,7 +345,6 @@ const Editprofile = ({ isopen, onclose }: any) => {
                 </div>
               </div>
 
-              {/* Bio */}
               <div className="space-y-2">
                 <Label htmlFor="bio" className="text-white">
                   Bio
@@ -219,7 +356,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
                   className="bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 resize-none min-h-[100px]"
                   placeholder="Tell the world about yourself"
                   maxLength={160}
-                  disabled={isLoading}
+                  disabled={saving}
                 />
                 <div className="flex justify-between text-sm">
                   {error.bio && <p className="text-red-400">{error.bio}</p>}
@@ -229,7 +366,6 @@ const Editprofile = ({ isopen, onclose }: any) => {
                 </div>
               </div>
 
-              {/* Location */}
               <div className="space-y-2">
                 <Label htmlFor="location" className="text-white">
                   Location
@@ -246,7 +382,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
                     className="pl-10 bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
                     placeholder="Where are you located?"
                     maxLength={30}
-                    disabled={isLoading}
+                    disabled={saving}
                   />
                 </div>
                 <div className="flex justify-between text-sm">
@@ -259,7 +395,6 @@ const Editprofile = ({ isopen, onclose }: any) => {
                 </div>
               </div>
 
-              {/* Website */}
               <div className="space-y-2">
                 <Label htmlFor="website" className="text-white">
                   Website
@@ -276,7 +411,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
                     className="pl-10 bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
                     placeholder="Your website URL"
                     maxLength={100}
-                    disabled={isLoading}
+                    disabled={saving}
                   />
                 </div>
                 <div className="flex justify-between text-sm">

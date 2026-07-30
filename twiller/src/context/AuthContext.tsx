@@ -40,6 +40,7 @@ interface AuthContextType {
     website: string;
     avatar: string;
   }) => Promise<void>;
+  setUser: (user: User | null) => void;
   logout: () => void;
   isLoading: boolean;
   googlesignin: () => void;
@@ -161,23 +162,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!user) return;
 
     setIsLoading(true);
-    // Mock API call - in real app, this would call an API
-    // await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const updatedUser: User = {
-      ...user,
-      ...profileData,
-    };
-    const res = await axiosInstance.patch(
-      `/userupdate/${user.email}`,
-      updatedUser
-    );
-    if (res.data) {
-      setUser(updatedUser);
-      localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
+    try {
+      const updatedUser: User = {
+        ...user,
+        ...profileData,
+      };
+      const res = await axiosInstance.patch(
+        `/userdata/${user.email}`,
+        updatedUser
+      );
+      if (res.data) {
+        setUser(updatedUser);
+        localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
+      }
+    } catch (err) {
+      console.error("updateProfile failed:", err);
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
   const googlesignin = async () => {
     setIsLoading(true);
@@ -231,6 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         login,
         signup,
         updateProfile,
+        setUser,
         logout,
         isLoading,
         googlesignin,
