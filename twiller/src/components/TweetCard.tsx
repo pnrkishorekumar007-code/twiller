@@ -107,6 +107,7 @@ export default function TweetCard({ tweet }: any) {
                 <img
                   src={tweetstate.image}
                   alt="Tweet image"
+                  loading="lazy"
                   className="w-full h-auto max-h-96 object-cover"
                 />
               </div>

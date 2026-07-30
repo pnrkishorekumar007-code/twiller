@@ -87,37 +87,45 @@ app.post("/post", async (req, res) => {
 // get all tweet
 app.get("/post", async (req, res) => {
   try {
-    const tweet = await Tweet.find().sort({ timestamp: -1 }).populate("author");
+    const tweet = await Tweet.find().sort({ timestamp: -1 }).limit(50).populate("author");
     return res.status(200).send(tweet);
   } catch (error) {
     return res.status(400).send({ error: error.message });
   }
 });
-//  LIKE TWEET
+//  LIKE / UNLIKE TWEET
 app.post("/like/:tweeted", async (req, res) => {
   try {
     const { userId } = req.body;
     const tweet = await Tweet.findById(req.params.tweeted);
-    if (!tweet.likedBy.includes(userId)) {
+    const alreadyLiked = tweet.likedBy.includes(userId);
+    if (alreadyLiked) {
+      tweet.likes -= 1;
+      tweet.likedBy.pull(userId);
+    } else {
       tweet.likes += 1;
       tweet.likedBy.push(userId);
-      await tweet.save();
     }
+    await tweet.save();
     res.send(tweet);
   } catch (error) {
     return res.status(400).send({ error: error.message });
   }
 });
-// retweet 
+// RETWEET / UNRETWEET
 app.post("/retweet/:tweeted", async (req, res) => {
   try {
     const { userId } = req.body;
     const tweet = await Tweet.findById(req.params.tweeted);
-    if (!tweet.retweetedBy.includes(userId)) {
+    const alreadyRetweeted = tweet.retweetedBy.includes(userId);
+    if (alreadyRetweeted) {
+      tweet.retweets -= 1;
+      tweet.retweetedBy.pull(userId);
+    } else {
       tweet.retweets += 1;
       tweet.retweetedBy.push(userId);
-      await tweet.save();
     }
+    await tweet.save();
     res.send(tweet);
   } catch (error) {
     return res.status(400).send({ error: error.message });

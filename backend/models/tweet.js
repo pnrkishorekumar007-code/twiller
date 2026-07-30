@@ -8,7 +8,7 @@ const TweetSchema = mongoose.Schema({
   likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   retweetedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   image: { type: String, default: null },
-  timestamp: { type: Date, default: Date.now() },
+  timestamp: { type: Date, default: Date.now },
 });
 
 export default mongoose.model("Tweet", TweetSchema);

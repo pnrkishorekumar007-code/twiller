@@ -17,87 +17,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import TweetCard from "./TweetCard";
 import { Card, CardContent } from "./ui/card";
 import Editprofile from "./Editprofile";
+import LoadingSpinner from "./loading-spinner";
 import axiosInstance from "@/lib/axiosInstance";
 
-interface Tweet {
-  id: string;
-  author: {
-    id: string;
-    username: string;
-    displayName: string;
-    avatar: string;
-    verified?: boolean;
-  };
-  content: string;
-  timestamp: string;
-  likes: number;
-  retweets: number;
-  comments: number;
-  liked?: boolean;
-  retweeted?: boolean;
-  image?: string;
-}
-const tweets: Tweet[] = [
-  {
-    id: "1",
-    author: {
-      id: "1",
-      username: "elonmusk",
-      displayName: "Elon Musk",
-      avatar:
-        "https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg?auto=compress&cs=tinysrgb&w=400",
-      verified: true,
-    },
-    content:
-      "Just had an amazing conversation about the future of AI. The possibilities are endless!",
-    timestamp: "2h",
-    likes: 1247,
-    retweets: 324,
-    comments: 89,
-    liked: false,
-    retweeted: false,
-  },
-  {
-    id: "2",
-    author: {
-      id: "1",
-      username: "sarahtech",
-      displayName: "Sarah Johnson",
-      avatar:
-        "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=400",
-      verified: false,
-    },
-    content:
-      "Working on some exciting new features for our app. Can't wait to share what we've been building! 🚀",
-    timestamp: "4h",
-    likes: 89,
-    retweets: 23,
-    comments: 12,
-    liked: true,
-    retweeted: false,
-  },
-  {
-    id: "3",
-    author: {
-      id: "4",
-      username: "designguru",
-      displayName: "Alex Chen",
-      avatar:
-        "https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=400",
-      verified: true,
-    },
-    content:
-      "The new design system is finally complete! It took 6 months but the results are incredible. Clean, consistent, and accessible.",
-    timestamp: "6h",
-    likes: 456,
-    retweets: 78,
-    comments: 34,
-    liked: false,
-    retweeted: true,
-    image:
-      "https://images.pexels.com/photos/196645/pexels-photo-196645.jpeg?auto=compress&cs=tinysrgb&w=800",
-  },
-];
 export default function ProfilePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("posts");
@@ -269,13 +191,18 @@ export default function ProfilePage() {
 
         <TabsContent value="posts" className="mt-0">
           <div className="divide-y divide-gray-800">
-            { loading ? (
+            {loading ? (
+              <Card className="bg-black border-none">
+                <CardContent className="py-12 text-center">
+                  <LoadingSpinner size="lg" className="mx-auto mb-4" />
+                  <p className="text-gray-400">Loading posts...</p>
+                </CardContent>
+              </Card>
+            ) : userTweets.length === 0 ? (
               <Card className="bg-black border-none">
                 <CardContent className="py-12 text-center">
                   <div className="text-gray-400">
-                    <h3 className="text-2xl font-bold mb-2">
-                      You haven't posted yet
-                    </h3>
+                    <h3 className="text-2xl font-bold mb-2">You haven't posted yet</h3>
                     <p>When you post, it will show up here.</p>
                   </div>
                 </CardContent>

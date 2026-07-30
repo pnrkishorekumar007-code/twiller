@@ -46,7 +46,7 @@ const TweetComposer = ({ onTweetPosted }: any) => {
     formdataimg.set("image", image);
     try {
       const res = await axios.post(
-        "https://api.imgbb.com/1/upload?key=97f3fb960c3520d6a88d7e29679cf96f",
+        "https://api.imgbb.com/1/upload?key=f21cc2cae66e4437ae46a874e6ea327c",
         formdataimg
       );
       const url = res.data.data.display_url;
