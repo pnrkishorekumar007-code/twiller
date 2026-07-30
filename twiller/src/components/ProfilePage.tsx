@@ -24,10 +24,9 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("posts");
   const [showEditModal, setShowEditModal] = useState(false);
-
-  if (!user) return null;
   const [tweets, setTweets] = useState<any>([]);
   const [loading, setloading] = useState(false);
+
   const fetchTweets = async () => {
     try {
       setloading(true);
@@ -42,7 +41,9 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchTweets();
   }, []);
-  // Filter tweets by current user
+
+  if (!user) return null;
+
   const userTweets = tweets.filter((tweet: any) => tweet.author._id === user._id);
 
   return (
@@ -71,6 +72,7 @@ export default function ProfilePage() {
             variant="ghost"
             size="sm"
             className="absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70"
+            onClick={() => setShowEditModal(true)}
           >
             <Camera className="h-5 w-5 text-white" />
           </Button>
@@ -132,12 +134,12 @@ export default function ProfilePage() {
         <div className="flex items-center space-x-4 text-gray-400 text-sm mb-3">
           <div className="flex items-center space-x-1">
             <MapPin className="h-4 w-4" />
-            <span>{user.location ? user.location : "Earth"}</span>
+            <span>{user.location || "Earth"}</span>
           </div>
           <div className="flex items-center space-x-1">
             <LinkIcon className="h-4 w-4" />
             <span className="text-blue-400">
-              {user.website ? user.website : "example.com"}
+              {user.website || "example.com"}
             </span>
           </div>
           <div className="flex items-center space-x-1">
