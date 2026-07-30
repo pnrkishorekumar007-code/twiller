@@ -50,6 +50,9 @@ app.get("/loggedinuser", async (req, res) => {
       return res.status(400).send({ error: "Email required" });
     }
     const user = await User.findOne({ email: email });
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
     return res.status(200).send(user);
   } catch (error) {
     return res.status(400).send({ error: error.message });
