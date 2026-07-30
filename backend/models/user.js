@@ -7,7 +7,7 @@ const UserSchema = mongoose.Schema({
   bio: { type: String, default: "" },
   location: { type: String, default: "" },
   website: { type: String, default: "" },
-  joinedDate: { type: Date, default: Date.now() },
+  joinedDate: { type: Date, default: Date.now },
 });
 
 export default mongoose.model("User", UserSchema);
