@@ -1,6 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
-import { db, storage } from "@/context/firebase";
-import React, { useState, useRef } from "react";
+import { storage } from "@/context/firebase";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Camera, LinkIcon, MapPin, X } from "lucide-react";
@@ -9,8 +9,7 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import LoadingSpinner from "./loading-spinner";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import axiosInstance from "@/lib/axiosInstance";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -51,17 +50,37 @@ const Editprofile = ({ isopen, onclose }: any) => {
   const [saving, setSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormdata] = useState({
-    displayName: user?.displayName || "",
-    bio: user?.bio || "",
-    location: user?.location || "",
-    website: user?.website || "",
-    avatar: user?.avatar || "",
+    displayName: "",
+    bio: "",
+    location: "",
+    website: "",
+    avatar: "",
   });
+  const [originalAvatar, setOriginalAvatar] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveLockRef = useRef(false);
+
+  useEffect(() => {
+    if (isopen && user) {
+      setFormdata({
+        displayName: user.displayName || "",
+        bio: user.bio || "",
+        location: user.location || "",
+        website: user.website || "",
+        avatar: user.avatar || "",
+      });
+      setOriginalAvatar(user.avatar || "");
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setError({});
+      setSaving(false);
+      setUploadProgress(0);
+      saveLockRef.current = false;
+    }
+  }, [isopen, user]);
 
   if (!isopen || !user) return null;
 
@@ -102,7 +121,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
     return null;
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError({});
     const file = e.target.files?.[0];
     if (!file) return;
@@ -115,9 +134,9 @@ const Editprofile = ({ isopen, onclose }: any) => {
     }
 
     setSelectedFile(file);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     const localUrl = URL.createObjectURL(file);
     setPreviewUrl(localUrl);
-    setFormdata((prev) => ({ ...prev, avatar: localUrl }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,54 +148,43 @@ const Editprofile = ({ isopen, onclose }: any) => {
     setError({});
 
     console.log("Save Started");
-    try {
-      let photoURL = formData.avatar;
+    let resolvedAvatar = originalAvatar;
 
+    try {
       if (selectedFile) {
         console.log("Image Upload Started");
-        const compressed = await compressImage(selectedFile, MAX_DIM);
-        const timestamp = Date.now();
-        const storageRef = ref(storage, `users/${user._id}/profile/profile-${timestamp}`);
-        const uploadTask = uploadBytesResumable(storageRef, compressed, {
-          contentType: selectedFile.type,
-        });
+        try {
+          const compressed = await compressImage(selectedFile, MAX_DIM);
+          const timestamp = Date.now();
+          const storageRef = ref(storage, `users/${user.email.replace(/[^a-zA-Z0-9]/g, "_")}/profile-${timestamp}`);
+          const uploadTask = uploadBytesResumable(storageRef, compressed, {
+            contentType: selectedFile.type,
+          });
 
-        photoURL = await new Promise<string>((resolve, reject) => {
-          uploadTask.on(
-            "state_changed",
-            (snapshot) => {
-              const pct = Math.round(
-                (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-              );
-              setUploadProgress(pct);
-            },
-            (err) => {
-              reject(new Error(`Upload failed: ${err.message}`));
-            },
-            async () => {
-              try {
-                const url = await getDownloadURL(uploadTask.snapshot.ref);
-                console.log("Image Upload Completed");
-                console.log("Download URL Generated");
-                resolve(url);
-              } catch (err) {
-                reject(err);
+          resolvedAvatar = await new Promise<string>((resolve, reject) => {
+            uploadTask.on(
+              "state_changed",
+              (snapshot) => {
+                setUploadProgress(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100));
+              },
+              (err) => {
+                reject(new Error(`Upload failed: ${err.message}`));
+              },
+              async () => {
+                try {
+                  resolve(await getDownloadURL(uploadTask.snapshot.ref));
+                } catch (err) {
+                  reject(err);
+                }
               }
-            }
-          );
-        });
+            );
+          });
+          console.log("Image Upload Completed:", resolvedAvatar);
+        } catch (uploadErr: any) {
+          console.error("Image upload failed, keeping original avatar:", uploadErr);
+          setError({ avatar: "Image upload failed. Profile saved without new image." });
+        }
       }
-
-      console.log("Firestore Update Started");
-      const userDocRef = doc(db, "users", user._id);
-      await updateDoc(userDocRef, {
-        displayName: formData.displayName,
-        username: user.username,
-        bio: formData.bio,
-        photoURL,
-        updatedAt: serverTimestamp(),
-      });
-      console.log("Firestore Update Completed");
 
       console.log("Backend Sync Started");
       const updatedData = {
@@ -184,19 +192,12 @@ const Editprofile = ({ isopen, onclose }: any) => {
         bio: formData.bio,
         location: formData.location,
         website: formData.website,
-        avatar: photoURL,
+        avatar: resolvedAvatar,
       };
       await axiosInstance.patch(`/userdata/${user.email}`, updatedData);
       console.log("Backend Sync Completed");
 
-      const updatedUser = {
-        ...user,
-        displayName: formData.displayName,
-        bio: formData.bio,
-        location: formData.location,
-        website: formData.website,
-        avatar: photoURL,
-      };
+      const updatedUser = { ...user, ...updatedData };
       setUser(updatedUser);
       localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
 
@@ -274,7 +275,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
                 <div className="relative">
                   <Avatar className="h-32 w-32 border-4 border-black">
                     <AvatarImage
-                      src={previewUrl || formData.avatar}
+                      src={previewUrl || originalAvatar}
                       alt={user?.displayName}
                     />
                     <AvatarFallback className="text-2xl">
