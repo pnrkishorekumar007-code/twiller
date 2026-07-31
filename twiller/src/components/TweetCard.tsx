@@ -13,6 +13,7 @@ import {
   Bookmark,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useNav } from "@/context/NavContext";
 import axiosInstance from "@/lib/axiosInstance";
 import CommentModal from "./CommentModal";
 
@@ -48,6 +49,7 @@ export default function TweetCard({
   onBookmarkChange?: (tweetId: string, bookmarked: boolean) => void;
 }) {
   const { user } = useAuth();
+  const { openProfile } = useNav();
   const [tweetstate, settweetstate] = useState(tweet);
   const [bookmarked, setBookmarked] = useState(!!tweet.bookmarked);
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -112,25 +114,50 @@ export default function TweetCard({
     <Card className="group/card bg-black border-gray-800 border-x-0 border-t-0 rounded-none transition-colors duration-150 hover:bg-gray-950/60 cursor-pointer">
       <CardContent className="p-4">
         <div className="flex space-x-3">
-          <Avatar className="h-12 w-12 ring-2 ring-transparent transition-shadow group-hover/card:ring-gray-800">
-            <AvatarImage src={authorAvatar} alt={authorName} />
-            <AvatarFallback>{authorName[0] || "?"}</AvatarFallback>
-          </Avatar>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (author?._id) openProfile(author._id);
+            }}
+            className="shrink-0 rounded-full focus:outline-none"
+            aria-label={`View ${authorName}'s profile`}
+          >
+            <Avatar className="h-12 w-12 ring-2 ring-transparent transition-shadow group-hover/card:ring-gray-800">
+              <AvatarImage src={authorAvatar} alt={authorName} />
+              <AvatarFallback>{authorName[0] || "?"}</AvatarFallback>
+            </Avatar>
+          </button>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2 mb-2">
-              <span className="font-bold text-white">{authorName}</span>
-              {author?.verified && (
-                <div className="bg-blue-500 rounded-full p-0.5">
-                  <svg
-                    className="h-4 w-4 text-white fill-current"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
-                  </svg>
-                </div>
-              )}
-              <span className="text-gray-500">@{authorUsername}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (author?._id) openProfile(author._id);
+                }}
+                className="flex items-center space-x-2 rounded-full font-bold text-white transition-colors hover:underline"
+              >
+                <span>{authorName}</span>
+                {author?.verified && (
+                  <div className="bg-blue-500 rounded-full p-0.5">
+                    <svg
+                      className="h-4 w-4 text-white fill-current"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (author?._id) openProfile(author._id);
+                }}
+                className="text-gray-500 transition-colors hover:underline"
+              >
+                @{authorUsername}
+              </button>
               <span className="text-gray-500">·</span>
               <span className="text-gray-500">
                 {tweetstate.timestamp &&

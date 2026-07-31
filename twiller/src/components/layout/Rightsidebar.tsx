@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import VerifiedBadge from "../VerifiedBadge";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
+import { useNav } from "@/context/NavContext";
 import { useToast } from "@/context/ToastContext";
 
 interface SuggestedUser {
@@ -56,6 +57,7 @@ const FALLBACK_SUGGESTIONS: SuggestedUser[] = [
 export default function RightSidebar() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { openProfile } = useNav();
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState<Set<string>>(new Set());
@@ -167,17 +169,26 @@ export default function RightSidebar() {
         className="flex items-center justify-between gap-2 rounded-xl p-1 transition-colors hover:bg-gray-800/60"
       >
         <div className="flex min-w-0 items-center space-x-3">
-          <Avatar className="h-10 w-10 shrink-0">
-            <AvatarImage src={u.avatar || ""} alt={u.displayName} />
-            <AvatarFallback>{u.displayName?.[0] || "?"}</AvatarFallback>
-          </Avatar>
+          <button
+            onClick={() => openProfile(u._id)}
+            className="shrink-0 rounded-full focus:outline-none"
+            aria-label={`View ${u.displayName}'s profile`}
+          >
+            <Avatar className="h-10 w-10 shrink-0">
+              <AvatarImage src={u.avatar || ""} alt={u.displayName} />
+              <AvatarFallback>{u.displayName?.[0] || "?"}</AvatarFallback>
+            </Avatar>
+          </button>
           <div className="min-w-0">
-            <div className="flex items-center space-x-1">
-              <span className="truncate text-[15px] font-semibold text-white">
+            <button
+              onClick={() => openProfile(u._id)}
+              className="flex items-center space-x-1 rounded-full focus:outline-none"
+            >
+              <span className="truncate text-[15px] font-semibold text-white transition-colors hover:underline">
                 {u.displayName}
               </span>
               {u.verified && <VerifiedBadge />}
-            </div>
+            </button>
             <div className="truncate text-sm text-gray-400">@{u.username}</div>
           </div>
         </div>

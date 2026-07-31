@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
+import { useNav } from "@/context/NavContext";
 import { useToast } from "@/context/ToastContext";
 
 interface SuggestedUser {
@@ -24,11 +25,16 @@ interface SuggestedUser {
 
 type ExploreTab = "top" | "people";
 
-export default function ExplorePage() {
+export default function ExplorePage({
+  initialQuery = "",
+}: {
+  initialQuery?: string;
+}) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { openProfile } = useNav();
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [activeTab, setActiveTab] = useState<ExploreTab>("top");
   const [posts, setPosts] = useState<Tweet[]>([]);
   const [people, setPeople] = useState<SuggestedUser[]>([]);
@@ -76,6 +82,10 @@ export default function ExplorePage() {
       setLoadingPeople(false);
     }
   };
+
+  useEffect(() => {
+    if (initialQuery) setQuery(initialQuery);
+  }, [initialQuery]);
 
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -137,17 +147,26 @@ export default function ExplorePage() {
         className="flex items-center justify-between gap-2 border-b border-gray-800 p-4 transition-colors hover:bg-gray-900/40"
       >
         <div className="flex min-w-0 items-center space-x-3">
-          <Avatar className="h-11 w-11 shrink-0">
-            <AvatarImage src={u.avatar || ""} alt={u.displayName} />
-            <AvatarFallback>{u.displayName?.[0] || "?"}</AvatarFallback>
-          </Avatar>
+          <button
+            onClick={() => openProfile(u._id)}
+            className="shrink-0 rounded-full focus:outline-none"
+            aria-label={`View ${u.displayName}'s profile`}
+          >
+            <Avatar className="h-11 w-11 shrink-0">
+              <AvatarImage src={u.avatar || ""} alt={u.displayName} />
+              <AvatarFallback>{u.displayName?.[0] || "?"}</AvatarFallback>
+            </Avatar>
+          </button>
           <div className="min-w-0">
-            <div className="flex items-center space-x-1">
-              <span className="truncate text-[15px] font-semibold text-white">
+            <button
+              onClick={() => openProfile(u._id)}
+              className="flex items-center space-x-1 rounded-full focus:outline-none"
+            >
+              <span className="truncate text-[15px] font-semibold text-white transition-colors hover:underline">
                 {u.displayName}
               </span>
               {u.verified && <VerifiedBadge />}
-            </div>
+            </button>
             <div className="truncate text-sm text-gray-400">@{u.username}</div>
             {u.bio && (
               <p className="mt-0.5 truncate text-sm text-gray-400">{u.bio}</p>
