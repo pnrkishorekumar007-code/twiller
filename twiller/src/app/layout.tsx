@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { ToastProvider } from "@/context/ToastContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'X Clone - Social Media Platform',
-  description: 'A modern Twitter clone built with Next.js ',
+  title: 'Twiller - Social Media Platform',
+  description: 'A modern Twitter clone built with Next.js, Express, and Firebase.',
    icons: {
     icon:"/favicon.ico",
   },
@@ -35,7 +36,7 @@ export default function RootLayout({
           src="https://checkout.razorpay.com/v1/checkout.js"
           strategy="beforeInteractive"
         />
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

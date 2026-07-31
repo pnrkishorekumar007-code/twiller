@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
@@ -13,6 +13,7 @@ import { Separator } from './ui/separator';
 import { useAuth } from '@/context/AuthContext';
 import TwitterLogo from './Twitterlogo';
 import { getFirebaseErrorMessage } from '@/lib/firebaseErrors';
+import { useToast } from '@/context/ToastContext';
 
 
 
@@ -24,6 +25,7 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) {
   const { login, signup, isLoading } = useAuth();
+  const { toast } = useToast();
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -33,6 +35,22 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     displayName: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setErrors({});
+    }
+  }, [isOpen, initialMode]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -76,8 +94,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     try {
       if (mode === 'login') {
         await login(formData.email, formData.password);
+        toast('Welcome back!', 'success');
       } else {
         await signup(formData.email, formData.password, formData.username, formData.displayName);
+        toast('Account created. Welcome to Twiller!', 'success');
       }
       onClose();
       setFormData({ email: '', password: '', username: '', displayName: '' });
@@ -101,8 +121,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md bg-black border-gray-800 text-white">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150"
+      onClick={onClose}
+    >
+      <Card
+        className="w-full max-w-md rounded-2xl border-gray-800 bg-black text-white animate-in zoom-in-95 fade-in duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         <CardHeader className="relative pb-6">
           <Button
             variant="ghost"
@@ -221,7 +247,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
 
             <Button
               type="submit"
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-full text-lg"
+              className="w-full rounded-full bg-blue-500 py-3 text-lg font-semibold text-white transition-all hover:bg-blue-600 active:scale-[0.98]"
               disabled={isLoading}
             >
               {isLoading ? (

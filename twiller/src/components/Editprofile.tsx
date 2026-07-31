@@ -12,6 +12,7 @@ import { Textarea } from "./ui/textarea";
 import LoadingSpinner from "./loading-spinner";
 import { ref, uploadBytesResumable, getDownloadURL, type UploadTask } from "firebase/storage";
 import axiosInstance from "@/lib/axiosInstance";
+import { useToast } from "@/context/ToastContext";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -93,8 +94,15 @@ function uploadImage(
   });
 }
 
-const Editprofile = ({ isopen, onclose }: any) => {
+const Editprofile = ({
+  isopen,
+  onclose,
+}: {
+  isopen: boolean;
+  onclose: () => void;
+}) => {
   const { user, setUser } = useAuth();
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormdata] = useState({
@@ -107,9 +115,18 @@ const Editprofile = ({ isopen, onclose }: any) => {
   const [originalAvatar, setOriginalAvatar] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [error, setError] = useState<any>({});
+  const [error, setError] = useState<Record<string, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const saveLockRef = useRef(false);
+
+  useEffect(() => {
+    if (!isopen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !saving) onclose();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isopen, onclose, saving]);
 
   useEffect(() => {
     if (isopen && user) {
@@ -155,7 +172,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
   const handleInputChange = (field: string, value: string) => {
     setFormdata((prev) => ({ ...prev, [field]: value }));
     if (error[field]) {
-      setError((prev: any) => ({ ...prev, [field]: "" }));
+      setError((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
@@ -247,7 +264,7 @@ const Editprofile = ({ isopen, onclose }: any) => {
       try {
         await axiosInstance.patch(`/userdata/${user.email}`, updatedData);
         console.log("Backend Sync Completed");
-      } catch (syncErr: any) {
+      } catch (syncErr: unknown) {
         console.warn("Backend sync failed (Firestore still updated):", syncErr);
       }
 
@@ -255,12 +272,16 @@ const Editprofile = ({ isopen, onclose }: any) => {
       setUser(updatedUser);
       localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
 
+      toast("Profile updated", "success");
       console.log("Profile Save Success");
       onclose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Profile Update Failed:", err);
       setError({
-        general: err.message || "Failed to update profile. Please try again.",
+        general:
+          err instanceof Error
+            ? err.message
+            : "Failed to update profile. Please try again.",
       });
     } finally {
       setSaving(false);
@@ -270,8 +291,14 @@ const Editprofile = ({ isopen, onclose }: any) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl bg-black border-gray-800 text-white max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-150"
+      onClick={() => !saving && onclose()}
+    >
+      <Card
+        className="w-full max-w-2xl rounded-2xl border-gray-800 bg-black text-white max-h-[90vh] overflow-y-auto animate-in zoom-in-95 fade-in duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         <CardHeader className="relative pb-4 border-b border-gray-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">

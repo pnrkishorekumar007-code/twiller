@@ -11,6 +11,7 @@ import {
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { auth } from "./firebase";
 import axiosInstance from "../lib/axiosInstance";
+import { useToast } from "./ToastContext";
 
 interface User {
   _id: string;
@@ -63,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check for existing session
@@ -126,11 +128,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       password
     );
     const user = usercred.user;
-    const newuser: any = {
+    const newuser: Partial<User> = {
       username,
       displayName,
       avatar: user.photoURL || "https://images.pexels.com/photos/1139743/pexels-photo-1139743.jpeg?auto=compress&cs=tinysrgb&w=400",
-      email: user.email,
+      email: user.email ?? undefined,
     };
     const res = await axiosInstance.post("/register", newuser);
     if (res.data) {
@@ -196,15 +198,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error("No email found in Google account");
       }
 
-      let userData;
+      let userData: User | undefined;
 
       try {
         const res = await axiosInstance.get("/loggedinuser", {
           params: { email: firebaseuser.email },
         });
         userData = res.data;
-      } catch (err: any) {
-        const newuser: any = {
+      } catch {
+        const newuser: Partial<User> = {
           username: firebaseuser.email.split("@")[0],
           displayName: firebaseuser.displayName || "User",
           avatar: firebaseuser.photoURL || "https://images.pexels.com/photos/1139743/pexels-photo-1139743.jpeg?auto=compress&cs=tinysrgb&w=400",
@@ -218,12 +220,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (userData) {
         setUser(userData);
         localStorage.setItem("twitter-user", JSON.stringify(userData));
+        toast("Signed in with Google", "success");
       } else {
         throw new Error("Login/Register failed: No user data returned");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Google Sign-In Error:", error);
-      alert(error.response?.data?.message || error.message || "Login failed");
+      const msg =
+        error instanceof Error
+          ? error.message
+          : "Login failed. Please try again.";
+      toast(msg, "error");
     } finally {
       setIsLoading(false);
     }

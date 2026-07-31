@@ -24,10 +24,16 @@ const FIREBASE_ERROR_MESSAGES: Record<string, string> = {
   "auth/missing-password": "Please enter a password.",
 };
 
-export function getFirebaseErrorMessage(error: any): string {
-  const code = error?.code;
+interface FirebaseLikeError {
+  code?: string;
+  message?: string;
+}
+
+export function getFirebaseErrorMessage(error: unknown): string {
+  const err = (error ?? null) as FirebaseLikeError | null;
+  const code = err?.code;
   if (code && FIREBASE_ERROR_MESSAGES[code]) {
     return FIREBASE_ERROR_MESSAGES[code];
   }
-  return error?.message || "Authentication failed. Please try again.";
+  return err?.message || "Authentication failed. Please try again.";
 }

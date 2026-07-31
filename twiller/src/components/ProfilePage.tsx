@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
@@ -8,23 +9,24 @@ import {
   Link as LinkIcon,
   MoreHorizontal,
   Camera,
-  Settings,
+  Crown,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import TweetCard from "./TweetCard";
+import TweetCard, { type Tweet } from "./TweetCard";
 import { Card, CardContent } from "./ui/card";
 import Editprofile from "./Editprofile";
-import LoadingSpinner from "./loading-spinner";
 import axiosInstance from "@/lib/axiosInstance";
+import { PLAN_LABELS } from "@/lib/plans";
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("posts");
   const [showEditModal, setShowEditModal] = useState(false);
-  const [tweets, setTweets] = useState<any>([]);
+  const [tweets, setTweets] = useState<Tweet[]>([]);
   const [loading, setloading] = useState(false);
 
   const fetchTweets = async () => {
@@ -40,8 +42,11 @@ export default function ProfilePage() {
     }
   };
   useEffect(() => {
-    if (user) fetchTweets();
-  }, []);
+    if (user) {
+      fetchTweets();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?._id]);
 
   if (!user) return null;
 
@@ -55,7 +60,8 @@ export default function ProfilePage() {
           <Button
             variant="ghost"
             size="sm"
-            className="p-2 rounded-full hover:bg-gray-900"
+            className="rounded-full p-2 transition-colors hover:bg-gray-900"
+            onClick={() => router.back()}
           >
             <ArrowLeft className="h-5 w-5 text-white" />
           </Button>
@@ -68,12 +74,14 @@ export default function ProfilePage() {
 
       {/* Cover Photo */}
       <div className="relative">
-        <div className="h-48 bg-gradient-to-r from-blue-600 to-purple-600 relative">
+        <div className="relative h-48 bg-gradient-to-r from-blue-600 via-blue-500 to-purple-600">
+          <div className="absolute inset-0 bg-black/20" />
           <Button
             variant="ghost"
             size="sm"
-            className="absolute top-4 right-4 p-2 rounded-full bg-black/50 hover:bg-black/70"
+            className="absolute right-4 top-4 rounded-full bg-black/50 p-2 transition-colors hover:bg-black/70"
             onClick={() => setShowEditModal(true)}
+            title="Edit cover photo"
           >
             <Camera className="h-5 w-5 text-white" />
           </Button>
@@ -84,14 +92,16 @@ export default function ProfilePage() {
           <div className="relative">
             <Avatar className="h-32 w-32 border-4 border-black">
               <AvatarImage src={user.avatar} alt={user.displayName} />
-              <AvatarFallback className="text-2xl">
+              <AvatarFallback className="bg-blue-600 text-2xl">
                 {user.displayName?.[0] || "?"}
               </AvatarFallback>
             </Avatar>
             <Button
               variant="ghost"
               size="sm"
-              className="absolute bottom-2 right-2 p-2 rounded-full bg-black/70 hover:bg-black/90"
+              className="absolute bottom-2 right-2 rounded-full bg-black/70 p-2 transition-colors hover:bg-black/90"
+              onClick={() => setShowEditModal(true)}
+              title="Edit profile photo"
             >
               <Camera className="h-4 w-4 text-white" />
             </Button>
@@ -102,7 +112,7 @@ export default function ProfilePage() {
         <div className="flex justify-end p-4">
           <Button
             variant="outline"
-            className="border-gray-600 text-white bg-gray-950 font-semibold rounded-full px-6"
+            className="rounded-full border-gray-600 bg-gray-950 px-6 font-semibold text-white transition-all hover:bg-gray-900 active:scale-[0.98]"
             onClick={() => setShowEditModal(true)}
           >
             Edit profile
@@ -111,21 +121,29 @@ export default function ProfilePage() {
       </div>
 
       {/* Profile Info */}
-      <div className="px-4 pb-4 mt-12">
-        <div className="flex items-start justify-between mb-3">
+      <div className="mt-12 px-4 pb-4">
+        <div className="mb-3 flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white">
               {user.displayName}
             </h1>
             <p className="text-gray-400">@{user.username}</p>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="p-2 rounded-full hover:bg-gray-900"
-          >
-            <MoreHorizontal className="h-5 w-5 text-gray-400" />
-          </Button>
+          <div className="flex items-center space-x-2">
+            {user.plan && user.plan !== "free" && (
+              <span className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-500/20 px-3 py-1 text-xs font-semibold text-yellow-400 ring-1 ring-yellow-500/30">
+                <Crown className="h-3.5 w-3.5" />
+                {PLAN_LABELS[user.plan] ?? user.plan}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-full p-2 transition-colors hover:bg-gray-900"
+            >
+              <MoreHorizontal className="h-5 w-5 text-gray-400" />
+            </Button>
+          </div>
         </div>
 
         {user.bio && (
@@ -195,23 +213,36 @@ export default function ProfilePage() {
         <TabsContent value="posts" className="mt-0">
           <div className="divide-y divide-gray-800">
             {loading ? (
-              <Card className="bg-black border-none">
-                <CardContent className="py-12 text-center">
-                  <LoadingSpinner size="lg" className="mx-auto mb-4" />
-                  <p className="text-gray-400">Loading posts...</p>
-                </CardContent>
-              </Card>
+              <>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex space-x-3 p-4">
+                    <div className="skeleton h-12 w-12 rounded-full" />
+                    <div className="flex-1 space-y-3">
+                      <div className="skeleton h-4 w-32 rounded-full" />
+                      <div className="skeleton h-4 w-3/4 rounded-full" />
+                      <div className="skeleton h-4 w-1/2 rounded-full" />
+                      <div className="flex justify-between pr-10">
+                        {[0, 1, 2, 3].map((j) => (
+                          <div key={j} className="skeleton h-5 w-5 rounded-full" />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
             ) : userTweets.length === 0 ? (
               <Card className="bg-black border-none">
                 <CardContent className="py-12 text-center">
                   <div className="text-gray-400">
-                    <h3 className="text-2xl font-bold mb-2">You haven't posted yet</h3>
+                    <h3 className="text-2xl font-bold mb-2">
+                      You haven&apos;t posted yet
+                    </h3>
                     <p>When you post, it will show up here.</p>
                   </div>
                 </CardContent>
               </Card>
             ) : (
-              userTweets.map((tweet:any) => (
+              userTweets.map((tweet) => (
                 <TweetCard key={tweet._id} tweet={tweet} />
               ))
             )}
@@ -223,7 +254,7 @@ export default function ProfilePage() {
             <CardContent className="py-12 text-center">
               <div className="text-gray-400">
                 <h3 className="text-2xl font-bold mb-2">
-                  You haven't replied yet
+                  You haven&apos;t replied yet
                 </h3>
                 <p>When you reply to a post, it will show up here.</p>
               </div>
@@ -249,7 +280,7 @@ export default function ProfilePage() {
             <CardContent className="py-12 text-center">
               <div className="text-gray-400">
                 <h3 className="text-2xl font-bold mb-2">
-                  You haven't written any articles
+                  You haven&apos;t written any articles
                 </h3>
                 <p>When you write articles, they will show up here.</p>
               </div>

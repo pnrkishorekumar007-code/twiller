@@ -5,7 +5,7 @@ import LoadingSpinner from "../loading-spinner";
 import Sidebar from "./Sidebar";
 import RightSidebar from "./Rightsidebar";
 import ProfilePage from "../ProfilePage";
-import { Card, CardContent } from "../ui/card";
+import { Construction } from "lucide-react";
 
 const Mainlayout = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
@@ -13,47 +13,46 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="text-center">
-          <div className="text-white text-4xl font-bold mb-4">X</div>
+          <div className="mb-4 animate-pulse text-4xl font-bold text-white">
+            X
+          </div>
           <LoadingSpinner size="lg" />
         </div>
       </div>
     );
   }
 
-  // If user is not logged in → show children (like login/signup pages)
   if (!user) {
     return <>{children}</>;
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex justify-center">
-      <div className="w-20 sm:w-24 md:w-64 border-r border-gray-800">
+    <div className="flex min-h-screen justify-center bg-black text-white">
+      <div className="sticky top-0 h-screen w-20 sm:w-24 md:w-64">
         <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       </div>
-      <main className="flex-1 max-w-2xl border-x border-gray-800">
+      <main className="min-h-screen flex-1 max-w-2xl border-x border-gray-800">
         {currentPage === "profile" ? (
           <ProfilePage />
         ) : currentPage === "home" ? (
           children
         ) : (
-          <div className="min-h-screen flex items-center justify-center">
-            <Card className="bg-black border-gray-800 text-center">
-              <CardContent className="py-16 px-10">
-                <p className="text-5xl mb-4">🚧</p>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  Coming soon
-                </h2>
-                <p className="text-gray-400">
-                  This page is under construction.
-                </p>
-              </CardContent>
-            </Card>
+          <div className="flex min-h-screen items-center justify-center">
+            <div className="text-center">
+              <Construction className="mx-auto mb-4 h-12 w-12 text-gray-700" />
+              <h2 className="mb-2 text-2xl font-bold text-white">
+                {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
+              </h2>
+              <p className="text-gray-400">
+                This page is under construction.
+              </p>
+            </div>
           </div>
         )}
       </main>
-      <div className="hidden lg:block w-80 p-4">
+      <div className="hidden lg:block w-80">
         <RightSidebar />
       </div>
     </div>

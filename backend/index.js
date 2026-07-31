@@ -65,6 +65,19 @@ app.get("/loggedinuser", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
+// list users for suggestions (excludes current user, includes self flag)
+app.get("/users", async (req, res) => {
+  try {
+    const { email } = req.query;
+    const users = await User.find({ email: { $ne: email } })
+      .select("username displayName avatar bio plan")
+      .limit(6)
+      .lean();
+    return res.status(200).send(users);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
 // update Profile
 app.patch("/userdata/:email", async (req, res) => {
   try {
