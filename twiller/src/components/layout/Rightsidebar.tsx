@@ -7,6 +7,7 @@ import {
   UserPlus,
   UserCheck,
   Loader2,
+  TrendingUp,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -57,10 +58,24 @@ const FALLBACK_SUGGESTIONS: SuggestedUser[] = [
 export default function RightSidebar() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { openProfile } = useNav();
+  const { openProfile, search } = useNav();
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState<Set<string>>(new Set());
+  const [trends, setTrends] = useState<{ tag: string; count: number }[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    axiosInstance
+      .get("/trends")
+      .then((res) => {
+        if (!cancelled) setTrends(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SuggestedUser[]>([]);
@@ -288,6 +303,36 @@ export default function RightSidebar() {
           </CardContent>
         </Card>
       </div>
+
+      {trends.length > 0 && (
+        <Card className="overflow-hidden rounded-2xl border-gray-800 bg-gray-900/80">
+          <CardContent className="p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-blue-400" />
+              <h3 className="text-lg font-bold text-white">Trends for you</h3>
+            </div>
+            <div>
+              {trends.map((t, i) => (
+                <button
+                  key={t.tag}
+                  onClick={() => search(t.tag)}
+                  className="flex w-full items-center justify-between rounded-xl p-2 text-left transition-colors hover:bg-gray-800/60"
+                >
+                  <div>
+                    <div className="text-xs text-gray-500">
+                      Trending {i + 1}
+                    </div>
+                    <div className="font-semibold text-white">{t.tag}</div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {t.count} {t.count === 1 ? "post" : "posts"}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="overflow-hidden rounded-2xl border-gray-800 bg-gray-900/80">
         <CardContent className="p-4">

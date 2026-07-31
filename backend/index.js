@@ -81,6 +81,30 @@ app.get("/users", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
+// TRENDS (hashtag counts from recent tweets)
+app.get("/trends", async (req, res) => {
+  try {
+    const tweets = await Tweet.find({ content: /#/ })
+      .select("content timestamp")
+      .sort({ timestamp: -1 })
+      .limit(200);
+    const counts = {};
+    for (const t of tweets) {
+      const tags = t.content.match(/#[\w]+/g) || [];
+      for (const tag of tags) {
+        const key = tag.toLowerCase();
+        counts[key] = (counts[key] || 0) + 1;
+      }
+    }
+    const trends = Object.entries(counts)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    return res.status(200).send(trends);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
 // search users
 app.get("/users/search", async (req, res) => {
   try {
