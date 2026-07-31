@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import User from "./models/user.js";
 import Tweet from "./models/tweet.js";
 import Notification from "./models/notification.js";
+import Conversation from "./models/conversation.js";
 import paymentRouter from "./routes/payment.js";
 dotenv.config();
 const app = express();
@@ -373,6 +374,105 @@ app.post("/notifications/read", async (req, res) => {
     await Notification.updateMany(
       { recipient: userId, read: false },
       { $set: { read: true } }
+    );
+    return res.status(200).send({ success: true });
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+// CONVERSATIONS / MESSAGES
+app.get("/conversations", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).send({ error: "userId is required" });
+    }
+    const conversations = await Conversation.find({ participants: userId })
+      .sort({ updatedAt: -1 })
+      .populate("participants", "displayName username avatar");
+    return res.status(200).send(conversations);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+app.get("/conversation", async (req, res) => {
+  try {
+    const { userId, otherId } = req.query;
+    if (!userId || !otherId) {
+      return res.status(400).send({ error: "userId and otherId are required" });
+    }
+    const conversation = await Conversation.findOne({
+      participants: { $all: [userId, otherId] },
+    }).populate("participants", "displayName username avatar");
+    return res.status(200).send(conversation);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+app.post("/conversation", async (req, res) => {
+  try {
+    const { userId, otherId } = req.body;
+    if (!userId || !otherId) {
+      return res.status(400).send({ error: "userId and otherId are required" });
+    }
+    let conversation = await Conversation.findOne({
+      participants: { $all: [userId, otherId] },
+    }).populate("participants", "displayName username avatar");
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [userId, otherId],
+        messages: [],
+      });
+      await conversation.populate("participants", "displayName username avatar");
+    }
+    return res.status(200).send(conversation);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+app.post("/message", async (req, res) => {
+  try {
+    const { userId, otherId, content } = req.body;
+    if (!userId || !otherId) {
+      return res.status(400).send({ error: "userId and otherId are required" });
+    }
+    if (!content || !content.trim()) {
+      return res.status(400).send({ error: "Message content is required" });
+    }
+    if (content.length > 500) {
+      return res.status(400).send({
+        error: "Message content must be 500 characters or less",
+      });
+    }
+    let conversation = await Conversation.findOne({
+      participants: { $all: [userId, otherId] },
+    });
+    if (!conversation) {
+      conversation = new Conversation({
+        participants: [userId, otherId],
+        messages: [],
+      });
+    }
+    conversation.messages.push({ sender: userId, content });
+    conversation.updatedAt = new Date();
+    await conversation.save();
+    return res.status(201).send(conversation);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+app.post("/conversations/read", async (req, res) => {
+  try {
+    const { userId, conversationId } = req.body;
+    if (!userId || !conversationId) {
+      return res
+        .status(400)
+        .send({ error: "userId and conversationId are required" });
+    }
+    await Conversation.updateOne(
+      { _id: conversationId },
+      { $set: { "messages.$[m].read": true } },
+      { arrayFilters: [{ "m.sender": { $ne: userId }, "m.read": false }] }
     );
     return res.status(200).send({ success: true });
   } catch (error) {

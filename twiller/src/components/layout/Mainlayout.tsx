@@ -8,6 +8,7 @@ import ProfilePage from "../ProfilePage";
 import ExplorePage from "../ExplorePage";
 import BookmarksPage from "../BookmarksPage";
 import NotificationsPage from "../NotificationsPage";
+import MessagesPage from "../MessagesPage";
 import { Construction } from "lucide-react";
 
 const Mainlayout = ({ children }: { children: React.ReactNode }) => {
@@ -47,6 +48,8 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
           <BookmarksPage />
         ) : currentPage === "notifications" ? (
           <NotificationsPage />
+        ) : currentPage === "messages" ? (
+          <MessagesPage />
         ) : (
           <div className="flex min-h-screen items-center justify-center">
             <div className="text-center">
