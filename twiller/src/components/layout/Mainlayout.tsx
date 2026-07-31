@@ -30,7 +30,7 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="flex min-h-screen justify-center bg-black text-white">
-      <div className="sticky top-0 h-screen w-20 sm:w-24 md:w-64">
+      <div className="sticky top-0 h-screen w-20 sm:w-24 lg:w-64">
         <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       </div>
       <main className="min-h-screen flex-1 max-w-2xl border-x border-gray-800">

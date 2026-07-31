@@ -25,6 +25,8 @@ interface User {
   location: string;
   plan?: string;
   tweetCount?: number;
+  following?: string[];
+  followedBy?: string[];
 }
 
 interface AuthContextType {

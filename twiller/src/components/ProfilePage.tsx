@@ -150,6 +150,21 @@ export default function ProfilePage() {
           <p className="text-white mb-3 leading-relaxed">{user.bio}</p>
         )}
 
+        <div className="mb-3 flex items-center space-x-4 text-sm">
+          <span className="text-white">
+            <span className="font-bold">
+              {user.following?.length ?? 0}
+            </span>{" "}
+            <span className="text-gray-400">Following</span>
+          </span>
+          <span className="text-white">
+            <span className="font-bold">
+              {user.followedBy?.length ?? 0}
+            </span>{" "}
+            <span className="text-gray-400">Followers</span>
+          </span>
+        </div>
+
         <div className="flex items-center space-x-4 text-gray-400 text-sm mb-3">
           <div className="flex items-center space-x-1">
             <MapPin className="h-4 w-4" />
