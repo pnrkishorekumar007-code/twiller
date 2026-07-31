@@ -9,7 +9,6 @@ import ExplorePage from "../ExplorePage";
 import BookmarksPage from "../BookmarksPage";
 import NotificationsPage from "../NotificationsPage";
 import MessagesPage from "../MessagesPage";
-import { Construction } from "lucide-react";
 
 const Mainlayout = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
@@ -51,17 +50,7 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
         ) : currentPage === "messages" ? (
           <MessagesPage />
         ) : (
-          <div className="flex min-h-screen items-center justify-center">
-            <div className="text-center">
-              <Construction className="mx-auto mb-4 h-12 w-12 text-gray-700" />
-              <h2 className="mb-2 text-2xl font-bold text-white">
-                {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
-              </h2>
-              <p className="text-gray-400">
-                This page is under construction.
-              </p>
-            </div>
-          </div>
+          children
         )}
       </main>
       <div className="hidden lg:block w-80">

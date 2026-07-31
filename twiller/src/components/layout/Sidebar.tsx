@@ -48,7 +48,6 @@ export default function Sidebar({
     { name: "Messages", icon: Mail, current: currentPage === "messages", page: "messages" },
     { name: "Bookmarks", icon: Bookmark, current: currentPage === "bookmarks", page: "bookmarks" },
     { name: "Profile", icon: User, current: currentPage === "profile", page: "profile" },
-    { name: "More", icon: MoreHorizontal, current: currentPage === "more", page: "more" },
   ];
 
   return (
