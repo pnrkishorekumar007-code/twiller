@@ -197,13 +197,19 @@ app.post("/post", async (req, res) => {
 // get all tweet
 app.get("/post", async (req, res) => {
   try {
-    const { following, userId } = req.query;
+    const { following, userId, q } = req.query;
     let query = {};
     if (following === "true" && userId) {
       const user = await User.findById(userId).select("following");
       const followedIds = user?.following || [];
       query = {
         author: { $in: [...followedIds, userId] },
+      };
+    }
+    if (q && q.toString().trim()) {
+      query = {
+        ...query,
+        content: { $regex: q.toString().trim(), $options: "i" },
       };
     }
     const tweet = await Tweet.find(query).sort({ timestamp: -1 }).limit(50).populate("author");
