@@ -6,6 +6,7 @@ import User from "./models/user.js";
 import Tweet from "./models/tweet.js";
 import Notification from "./models/notification.js";
 import Conversation from "./models/conversation.js";
+import Comment from "./models/comment.js";
 import paymentRouter from "./routes/payment.js";
 dotenv.config();
 const app = express();
@@ -275,6 +276,51 @@ app.get("/post/user/:userId", async (req, res) => {
       .sort({ timestamp: -1 })
       .populate("author");
     return res.status(200).send(tweet);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+// COMMENTS
+app.get("/comments/:tweetId", async (req, res) => {
+  try {
+    const comments = await Comment.find({ tweet: req.params.tweetId })
+      .sort({ timestamp: 1 })
+      .populate("author", "displayName username avatar");
+    return res.status(200).send(comments);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+app.post("/comments/:tweetId", async (req, res) => {
+  try {
+    const { author, content } = req.body;
+    if (!author) {
+      return res.status(400).send({ error: "author is required" });
+    }
+    if (!content || !content.trim()) {
+      return res.status(400).send({ error: "Comment content is required" });
+    }
+    if (content.length > 200) {
+      return res.status(400).send({
+        error: "Comment must be 200 characters or less",
+      });
+    }
+    const tweet = await Tweet.findById(req.params.tweetId);
+    if (!tweet) {
+      return res.status(404).send({ error: "Tweet not found" });
+    }
+    const comment = await Comment.create({
+      tweet: tweet._id,
+      author,
+      content,
+    });
+    tweet.comments += 1;
+    await tweet.save();
+    const populated = await Comment.findById(comment._id).populate(
+      "author",
+      "displayName username avatar"
+    );
+    return res.status(201).send(populated);
   } catch (error) {
     return res.status(400).send({ error: error.message });
   }

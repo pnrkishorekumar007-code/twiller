@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import axiosInstance from "@/lib/axiosInstance";
+import CommentModal from "./CommentModal";
 
 interface Author {
   _id?: string;
@@ -49,6 +50,7 @@ export default function TweetCard({
   const { user } = useAuth();
   const [tweetstate, settweetstate] = useState(tweet);
   const [bookmarked, setBookmarked] = useState(!!tweet.bookmarked);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const likeTweet = async (tweetId: string) => {
     try {
       const res = await axiosInstance.post(`/like/${tweetId}`, {
@@ -166,6 +168,10 @@ export default function TweetCard({
             <div className="flex items-center justify-between max-w-md">
               <button
                 className="group flex items-center gap-1.5 rounded-full p-2 text-gray-500 transition-all hover:bg-blue-900/20 hover:text-blue-400 active:scale-90"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCommentsOpen(true);
+                }}
               >
                 <MessageCircle className="h-5 w-5" />
                 <span className="text-sm">{formatNumber(tweetstate.comments)}</span>
@@ -237,6 +243,11 @@ export default function TweetCard({
           </div>
         </div>
       </CardContent>
+      <CommentModal
+        tweet={tweetstate}
+        open={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+      />
     </Card>
   );
 }
