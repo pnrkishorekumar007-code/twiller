@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import User from "./models/user.js";
 import Tweet from "./models/tweet.js";
+import Notification from "./models/notification.js";
 import paymentRouter from "./routes/payment.js";
 dotenv.config();
 const app = express();
@@ -124,6 +125,11 @@ app.post("/follow/:targetId", async (req, res) => {
     } else {
       target.followedBy.push(userId);
       follower.following.push(target._id);
+      await Notification.create({
+        recipient: target._id,
+        actor: userId,
+        type: "follow",
+      });
     }
     await Promise.all([target.save(), follower.save()]);
     return res.status(200).send({ following: !alreadyFollowing });
@@ -277,13 +283,21 @@ app.post("/like/:tweeted", async (req, res) => {
   try {
     const { userId } = req.body;
     const tweet = await Tweet.findById(req.params.tweeted);
-    const alreadyLiked = tweet.likedBy.includes(userId);
+    const alreadyLiked = tweet.likedBy.some((id) => id.equals(userId));
     if (alreadyLiked) {
       tweet.likes -= 1;
       tweet.likedBy.pull(userId);
     } else {
       tweet.likes += 1;
       tweet.likedBy.push(userId);
+      if (String(tweet.author) !== String(userId)) {
+        await Notification.create({
+          recipient: tweet.author,
+          actor: userId,
+          type: "like",
+          tweet: tweet._id,
+        });
+      }
     }
     await tweet.save();
     res.send(tweet);
@@ -296,16 +310,71 @@ app.post("/retweet/:tweeted", async (req, res) => {
   try {
     const { userId } = req.body;
     const tweet = await Tweet.findById(req.params.tweeted);
-    const alreadyRetweeted = tweet.retweetedBy.includes(userId);
+    const alreadyRetweeted = tweet.retweetedBy.some((id) => id.equals(userId));
     if (alreadyRetweeted) {
       tweet.retweets -= 1;
       tweet.retweetedBy.pull(userId);
     } else {
       tweet.retweets += 1;
       tweet.retweetedBy.push(userId);
+      if (String(tweet.author) !== String(userId)) {
+        await Notification.create({
+          recipient: tweet.author,
+          actor: userId,
+          type: "retweet",
+          tweet: tweet._id,
+        });
+      }
     }
     await tweet.save();
     res.send(tweet);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+// NOTIFICATIONS
+app.get("/notifications", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).send({ error: "userId is required" });
+    }
+    const notifications = await Notification.find({ recipient: userId })
+      .sort({ timestamp: -1 })
+      .limit(50)
+      .populate("actor", "displayName username avatar")
+      .populate("tweet", "content image timestamp");
+    return res.status(200).send(notifications);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+app.get("/notifications/unread-count", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).send({ error: "userId is required" });
+    }
+    const count = await Notification.countDocuments({
+      recipient: userId,
+      read: false,
+    });
+    return res.status(200).send({ count });
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+app.post("/notifications/read", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).send({ error: "userId is required" });
+    }
+    await Notification.updateMany(
+      { recipient: userId, read: false },
+      { $set: { read: true } }
+    );
+    return res.status(200).send({ success: true });
   } catch (error) {
     return res.status(400).send({ error: error.message });
   }

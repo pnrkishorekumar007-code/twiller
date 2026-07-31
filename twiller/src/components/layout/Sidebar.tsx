@@ -26,6 +26,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import TwitterLogo from "../Twitterlogo";
 import { useAuth } from "@/context/AuthContext";
+import { useNotificationsUnread } from "@/lib/useNotificationsUnread";
 import { PLAN_LABELS } from "@/lib/plans";
 
 interface SidebarProps {
@@ -38,6 +39,7 @@ export default function Sidebar({
   onNavigate,
 }: SidebarProps) {
   const { user, logout } = useAuth();
+  const unreadCount = useNotificationsUnread(user?._id);
 
   const navigation = [
     { name: "Home", icon: Home, current: currentPage === "home", page: "home" },
@@ -74,9 +76,9 @@ export default function Sidebar({
                   }`}
                 />
                 <span className="hidden md:inline">{item.name}</span>
-                {item.badge && (
-                  <span className="ml-auto hidden h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white md:flex">
-                    3
+                {item.badge && unreadCount > 0 && (
+                  <span className="ml-auto hidden h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1 text-xs font-semibold text-white md:flex">
+                    {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </button>
