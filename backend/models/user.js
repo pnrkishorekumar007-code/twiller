@@ -15,6 +15,8 @@ const UserSchema = mongoose.Schema({
   },
   planRenewedAt: { type: Date, default: Date.now },
   tweetCount: { type: Number, default: 0 },
+  following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  followedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 });
 
 export default mongoose.model("User", UserSchema);

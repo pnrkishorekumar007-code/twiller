@@ -1,13 +1,22 @@
 "use client";
 
-import { Search, Crown, Sparkles, UserPlus, UserCheck } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import {
+  Search,
+  Crown,
+  Sparkles,
+  UserPlus,
+  UserCheck,
+  Loader2,
+} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Input } from "../ui/input";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import axiosInstance from "@/lib/axiosInstance";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 
 interface SuggestedUser {
   _id: string;
@@ -16,6 +25,7 @@ interface SuggestedUser {
   avatar?: string;
   bio?: string;
   verified?: boolean;
+  followedBy?: string[];
 }
 
 const FALLBACK_SUGGESTIONS: SuggestedUser[] = [
@@ -42,19 +52,48 @@ const FALLBACK_SUGGESTIONS: SuggestedUser[] = [
   },
 ];
 
+function VerifiedBadge() {
+  return (
+    <div className="rounded-full bg-blue-500 p-0.5">
+      <svg className="h-3 w-3 fill-current text-white" viewBox="0 0 20 20">
+        <path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
+      </svg>
+    </div>
+  );
+}
+
 export default function RightSidebar() {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState<Set<string>>(new Set());
+
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SuggestedUser[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const fetchUsers = async () => {
       try {
-        const res = await axiosInstance.get("/users");
+        const res = await axiosInstance.get("/users", {
+          params: { email: user?.email },
+        });
         if (cancelled) return;
         const users = Array.isArray(res.data) ? res.data : [];
         setSuggestions(users.length > 0 ? users : FALLBACK_SUGGESTIONS);
+        setFollowing(
+          new Set(
+            users
+              .filter((u: SuggestedUser) =>
+                u.followedBy?.includes(user?._id ?? "")
+              )
+              .map((u: SuggestedUser) => u._id)
+          )
+        );
       } catch {
         if (!cancelled) setSuggestions(FALLBACK_SUGGESTIONS);
       } finally {
@@ -65,9 +104,44 @@ export default function RightSidebar() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user?._id, user?.email]);
 
-  const toggleFollow = (id: string) => {
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    const q = query.trim();
+    if (!q) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const res = await axiosInstance.get("/users/search", {
+          params: { q },
+        });
+        setSearchResults(Array.isArray(res.data) ? res.data : []);
+        setSearchOpen(true);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    };
+  }, [query]);
+
+  const isFollowingUser = (id: string) => following.has(id);
+
+  const toggleFollow = async (id: string) => {
+    if (!user) {
+      toast("Log in to follow users", "error");
+      return;
+    }
+    const wasFollowing = following.has(id);
     setFollowing((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -77,6 +151,67 @@ export default function RightSidebar() {
       }
       return next;
     });
+    try {
+      await axiosInstance.post(`/follow/${id}`, { userId: user._id });
+      toast(wasFollowing ? "Unfollowed" : "Following", "success");
+    } catch {
+      setFollowing((prev) => {
+        const next = new Set(prev);
+        if (wasFollowing) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+        return next;
+      });
+      toast("Failed to update follow. Try again.", "error");
+    }
+  };
+
+  const renderUser = (u: SuggestedUser) => {
+    const isFollowing = isFollowingUser(u._id);
+    return (
+      <div
+        key={u._id}
+        className="flex items-center justify-between gap-2 rounded-xl p-1 transition-colors hover:bg-gray-800/60"
+      >
+        <div className="flex min-w-0 items-center space-x-3">
+          <Avatar className="h-10 w-10 shrink-0">
+            <AvatarImage src={u.avatar || ""} alt={u.displayName} />
+            <AvatarFallback>{u.displayName?.[0] || "?"}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <div className="flex items-center space-x-1">
+              <span className="truncate text-[15px] font-semibold text-white">
+                {u.displayName}
+              </span>
+              {u.verified && <VerifiedBadge />}
+            </div>
+            <div className="truncate text-sm text-gray-400">@{u.username}</div>
+          </div>
+        </div>
+        <Button
+          className={`h-8 shrink-0 rounded-full px-4 text-sm font-bold transition-all active:scale-95 ${
+            isFollowing
+              ? "border border-gray-600 bg-transparent text-white hover:bg-gray-800"
+              : "bg-white text-black hover:bg-gray-200"
+          }`}
+          onClick={() => toggleFollow(u._id)}
+        >
+          {isFollowing ? (
+            <span className="flex items-center gap-1">
+              <UserCheck className="h-4 w-4" />
+              Following
+            </span>
+          ) : (
+            <span className="flex items-center gap-1">
+              <UserPlus className="h-4 w-4" />
+              Follow
+            </span>
+          )}
+        </Button>
+      </div>
+    );
   };
 
   return (
@@ -86,8 +221,49 @@ export default function RightSidebar() {
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => query.trim() && setSearchOpen(true)}
+            onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
             className="rounded-full border-transparent bg-gray-900 py-3 pl-12 text-white placeholder-gray-500 transition-colors focus:border-blue-500 focus:bg-black focus:ring-blue-500/30"
           />
+          {query.trim() && (
+            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+              {searching ? (
+                <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+              ) : (
+                <button
+                  className="rounded-full p-0.5 text-gray-400 hover:text-white"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M6 6l12 12M18 6L6 18"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+          {searchOpen && query.trim() && (
+            <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-gray-800 bg-gray-950 shadow-2xl shadow-black/60">
+              <div className="max-h-80 space-y-1 overflow-y-auto p-2">
+                {searchResults.length === 0 && !searching ? (
+                  <p className="p-4 text-center text-sm text-gray-400">
+                    No users found
+                  </p>
+                ) : (
+                  searchResults.map((u) =>
+                    u._id === user?._id ? null : renderUser(u)
+                  )
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <Card className="overflow-hidden rounded-2xl border-gray-800 bg-gray-900/80">
@@ -127,69 +303,7 @@ export default function RightSidebar() {
               ))}
             </div>
           ) : (
-          <div className="space-y-4">
-            {suggestions.map((user) => {
-              const isFollowing = following.has(user._id);
-              return (
-                <div
-                  key={user._id}
-                  className="flex items-center justify-between gap-2 rounded-xl p-1 transition-colors hover:bg-gray-800/60"
-                >
-                  <div className="flex min-w-0 items-center space-x-3">
-                    <Avatar className="h-10 w-10 shrink-0">
-                      <AvatarImage
-                        src={user.avatar || ""}
-                        alt={user.displayName}
-                      />
-                      <AvatarFallback>
-                        {user.displayName?.[0] || "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <div className="flex items-center space-x-1">
-                        <span className="truncate text-[15px] font-semibold text-white">
-                          {user.displayName}
-                        </span>
-                        {user.verified && (
-                          <div className="rounded-full bg-blue-500 p-0.5">
-                            <svg
-                              className="h-3 w-3 fill-current text-white"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="truncate text-sm text-gray-400">
-                        @{user.username}
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    className={`h-8 shrink-0 rounded-full px-4 text-sm font-bold transition-all active:scale-95 ${
-                      isFollowing
-                        ? "border border-gray-600 bg-transparent text-white hover:bg-gray-800"
-                        : "bg-white text-black hover:bg-gray-200"
-                    }`}
-                    onClick={() => toggleFollow(user._id)}
-                  >
-                    {isFollowing ? (
-                      <span className="flex items-center gap-1">
-                        <UserCheck className="h-4 w-4" />
-                        Following
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <UserPlus className="h-4 w-4" />
-                        Follow
-                      </span>
-                    )}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
+            <div className="space-y-4">{suggestions.map(renderUser)}</div>
           )}
           <button className="mt-4 p-0 text-blue-400 transition-colors hover:text-blue-300">
             Show more

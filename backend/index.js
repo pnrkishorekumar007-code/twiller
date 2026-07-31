@@ -70,10 +70,61 @@ app.get("/users", async (req, res) => {
   try {
     const { email } = req.query;
     const users = await User.find({ email: { $ne: email } })
-      .select("username displayName avatar bio plan")
+      .select("username displayName avatar bio plan following followedBy")
       .limit(6)
       .lean();
     return res.status(200).send(users);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+// search users
+app.get("/users/search", async (req, res) => {
+  try {
+    const q = (req.query.q || "").toString().trim();
+    if (!q) {
+      return res.status(200).send([]);
+    }
+    const users = await User.find({
+      $or: [
+        { username: { $regex: q, $options: "i" } },
+        { displayName: { $regex: q, $options: "i" } },
+      ],
+    })
+      .select("username displayName avatar bio plan following followedBy")
+      .limit(8)
+      .lean();
+    return res.status(200).send(users);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+// FOLLOW / UNFOLLOW
+app.post("/follow/:targetId", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId || userId === req.params.targetId) {
+      return res.status(400).send({ error: "Invalid follow request" });
+    }
+    const target = await User.findById(req.params.targetId);
+    if (!target) {
+      return res.status(404).send({ error: "User not found" });
+    }
+    const follower = await User.findById(userId);
+    if (!follower) {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    const alreadyFollowing = target.followedBy.includes(userId);
+    if (alreadyFollowing) {
+      target.followedBy.pull(userId);
+      follower.following.pull(target._id);
+    } else {
+      target.followedBy.push(userId);
+      follower.following.push(target._id);
+    }
+    await Promise.all([target.save(), follower.save()]);
+    return res.status(200).send({ following: !alreadyFollowing });
   } catch (error) {
     return res.status(400).send({ error: error.message });
   }
@@ -146,7 +197,16 @@ app.post("/post", async (req, res) => {
 // get all tweet
 app.get("/post", async (req, res) => {
   try {
-    const tweet = await Tweet.find().sort({ timestamp: -1 }).limit(50).populate("author");
+    const { following, userId } = req.query;
+    let query = {};
+    if (following === "true" && userId) {
+      const user = await User.findById(userId).select("following");
+      const followedIds = user?.following || [];
+      query = {
+        author: { $in: [...followedIds, userId] },
+      };
+    }
+    const tweet = await Tweet.find(query).sort({ timestamp: -1 }).limit(50).populate("author");
     return res.status(200).send(tweet);
   } catch (error) {
     return res.status(400).send({ error: error.message });

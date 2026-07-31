@@ -1,36 +1,85 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import TweetCard from "./TweetCard";
 import TweetComposer from "./TweetComposer";
 import axiosInstance from "@/lib/axiosInstance";
-import { Bird } from "lucide-react";
+import { Bird, UserPlus } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 interface Tweet {
   _id: string;
 }
 
+type FeedTab = "foryou" | "following";
+
 const Feed = () => {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<FeedTab>("foryou");
   const [tweets, setTweets] = useState<Tweet[]>([]);
+  const [followingTweets, setFollowingTweets] = useState<Tweet[]>([]);
   const [loading, setloading] = useState(false);
-  const fetchTweets = async () => {
+  const [followingLoading, setFollowingLoading] = useState(false);
+  const cacheRef = useRef<{ foryou: Tweet[] | null; following: Tweet[] | null }>({
+    foryou: null,
+    following: null,
+  });
+
+  const fetchTweets = useCallback(async () => {
     try {
       setloading(true);
       const res = await axiosInstance.get("/post");
       setTweets(res.data);
+      cacheRef.current.foryou = res.data;
     } catch (error) {
       console.error(error);
     } finally {
       setloading(false);
     }
-  };
-  useEffect(() => {
-    fetchTweets();
   }, []);
+
+  const fetchFollowingTweets = useCallback(async () => {
+    if (!user?._id) return;
+    try {
+      setFollowingLoading(true);
+      const res = await axiosInstance.get("/post", {
+        params: { following: true, userId: user._id },
+      });
+      setFollowingTweets(res.data);
+      cacheRef.current.following = res.data;
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setFollowingLoading(false);
+    }
+  }, [user?._id]);
+
+  useEffect(() => {
+    if (cacheRef.current.foryou) {
+      setTweets(cacheRef.current.foryou);
+    } else {
+      fetchTweets();
+    }
+  }, [fetchTweets]);
+
+  useEffect(() => {
+    if (activeTab !== "following") return;
+    if (cacheRef.current.following) {
+      setFollowingTweets(cacheRef.current.following);
+    } else {
+      fetchFollowingTweets();
+    }
+  }, [activeTab, fetchFollowingTweets]);
+
   const handlenewtweet = (newtweet: Tweet) => {
     setTweets((prev) => [newtweet, ...prev]);
+    cacheRef.current.foryou = [newtweet, ...(cacheRef.current.foryou ?? [])];
   };
+
+  const displayed = activeTab === "following" ? followingTweets : tweets;
+  const displayedLoading =
+    activeTab === "following" ? followingLoading : loading;
 
   const SkeletonCard = () => (
     <div className="flex space-x-3 border-b border-gray-800 p-4">
@@ -59,7 +108,12 @@ const Feed = () => {
           <h1 className="text-xl font-bold text-white">Home</h1>
         </div>
 
-        <Tabs defaultValue="foryou" className="w-full">
+        <Tabs
+          defaultValue="foryou"
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as FeedTab)}
+          className="w-full"
+        >
           <TabsList className="grid h-auto w-full grid-cols-2 rounded-none border-b border-gray-800 bg-transparent">
             <TabsTrigger
               value="foryou"
@@ -78,24 +132,36 @@ const Feed = () => {
       </div>
       <TweetComposer onTweetPosted={handlenewtweet} />
       <div className="divide-y divide-gray-800">
-        {loading ? (
+        {displayedLoading ? (
           <>
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
           </>
-        ) : tweets.length === 0 ? (
-          <div className="flex flex-col items-center py-16 text-center">
-            <Bird className="mb-4 h-10 w-10 text-gray-700" />
-            <p className="text-lg font-semibold text-gray-300">
-              No tweets yet
-            </p>
-            <p className="text-sm text-gray-500">
-              Be the first to post what&apos;s happening.
-            </p>
-          </div>
+        ) : displayed.length === 0 ? (
+          activeTab === "following" ? (
+            <div className="flex flex-col items-center py-16 text-center">
+              <UserPlus className="mb-4 h-10 w-10 text-gray-700" />
+              <p className="text-lg font-semibold text-gray-300">
+                No tweets from people you follow
+              </p>
+              <p className="text-sm text-gray-500">
+                Follow people on the right to see their tweets here.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center py-16 text-center">
+              <Bird className="mb-4 h-10 w-10 text-gray-700" />
+              <p className="text-lg font-semibold text-gray-300">
+                No tweets yet
+              </p>
+              <p className="text-sm text-gray-500">
+                Be the first to post what&apos;s happening.
+              </p>
+            </div>
+          )
         ) : (
-          tweets.map((tweet) => (
+          displayed.map((tweet) => (
             <TweetCard key={tweet._id} tweet={tweet} />
           ))
         )}
