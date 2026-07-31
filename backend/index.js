@@ -1,14 +1,15 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import User from "./models/user.js";
 import Tweet from "./models/tweet.js";
 import Notification from "./models/notification.js";
 import Conversation from "./models/conversation.js";
 import Comment from "./models/comment.js";
 import paymentRouter from "./routes/payment.js";
-dotenv.config();
+import passwordResetRouter from "./routes/passwordReset.js";
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -234,6 +235,8 @@ app.patch("/userdata/:email", async (req, res) => {
 });
 // Payment API
 app.use("/payment", paymentRouter);
+// Auth API
+app.use("/auth", passwordResetRouter);
 
 // Tweet API
 

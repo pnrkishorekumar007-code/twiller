@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import TwitterLogo from './Twitterlogo';
 import { getFirebaseErrorMessage } from '@/lib/firebaseErrors';
 import { useToast } from '@/context/ToastContext';
+import { useRouter } from 'next/navigation';
 
 
 
@@ -26,6 +27,7 @@ interface AuthModalProps {
 export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) {
   const { login, signup, isLoading } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -244,6 +246,22 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                 <p className="text-red-400 text-sm">{errors.password}</p>
               )}
             </div>
+
+            {mode === 'login' && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    router.push('/forgot-password');
+                  }}
+                  className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                  disabled={isLoading}
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
             <Button
               type="submit"

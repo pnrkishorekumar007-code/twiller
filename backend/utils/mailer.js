@@ -69,3 +69,33 @@ export async function sendInvoiceEmail({
 
   await transporter.sendMail(mailOptions);
 }
+
+export async function sendPasswordResetEmail({ to, username, newPassword }) {
+  const mailOptions = {
+    from: `"Twiller" <${process.env.SMTP_USER}>`,
+    to,
+    subject: "Twiller Password Reset",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+        <div style="background: #0f172a; color: #fff; padding: 24px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px;">Twiller</h1>
+          <p style="margin: 4px 0 0; color: #94a3b8;">Password Reset</p>
+        </div>
+        <div style="padding: 24px;">
+          <p>Hi <strong>@${username}</strong>,</p>
+          <p>Your password has been reset. Use the temporary password below to sign in:</p>
+          <div style="margin: 24px 0; padding: 16px; background: #f1f5f9; border-radius: 8px; text-align: center;">
+            <code style="font-size: 20px; font-weight: bold; color: #0f172a; letter-spacing: 1px;">${newPassword}</code>
+          </div>
+          <p>After signing in, please change your password to something you'll remember (password change is not yet available in the app, but you can request another reset from the forgot-password page).</p>
+          <p style="color: #6b7280; font-size: 13px;">If you didn't request this, you can safely ignore this email — your account may have been reset by someone who knows your email.</p>
+        </div>
+        <div style="background: #f8fafc; padding: 16px; text-align: center; color: #94a3b8; font-size: 12px;">
+          &copy; ${new Date().getFullYear()} Twiller. All rights reserved.
+        </div>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
