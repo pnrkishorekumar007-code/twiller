@@ -17,6 +17,7 @@ const UserSchema = mongoose.Schema({
   tweetCount: { type: Number, default: 0 },
   following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   followedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tweet" }],
 });
 
 export default mongoose.model("User", UserSchema);

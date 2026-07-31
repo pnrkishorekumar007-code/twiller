@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import RightSidebar from "./Rightsidebar";
 import ProfilePage from "../ProfilePage";
 import ExplorePage from "../ExplorePage";
+import BookmarksPage from "../BookmarksPage";
 import { Construction } from "lucide-react";
 
 const Mainlayout = ({ children }: { children: React.ReactNode }) => {
@@ -41,6 +42,8 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
           children
         ) : currentPage === "explore" ? (
           <ExplorePage />
+        ) : currentPage === "bookmarks" ? (
+          <BookmarksPage />
         ) : (
           <div className="flex min-h-screen items-center justify-center">
             <div className="text-center">

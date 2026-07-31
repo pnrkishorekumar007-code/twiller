@@ -10,6 +10,7 @@ import {
   Repeat2,
   Share,
   MoreHorizontal,
+  Bookmark,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import axiosInstance from "@/lib/axiosInstance";
@@ -35,11 +36,19 @@ export interface Tweet {
   createdAt?: string;
   timestamp?: string;
   verified?: boolean;
+  bookmarked?: boolean;
 }
 
-export default function TweetCard({ tweet }: { tweet: Tweet }) {
+export default function TweetCard({
+  tweet,
+  onBookmarkChange,
+}: {
+  tweet: Tweet;
+  onBookmarkChange?: (tweetId: string, bookmarked: boolean) => void;
+}) {
   const { user } = useAuth();
   const [tweetstate, settweetstate] = useState(tweet);
+  const [bookmarked, setBookmarked] = useState(!!tweet.bookmarked);
   const likeTweet = async (tweetId: string) => {
     try {
       const res = await axiosInstance.post(`/like/${tweetId}`, {
@@ -59,6 +68,21 @@ export default function TweetCard({ tweet }: { tweet: Tweet }) {
       settweetstate(res.data);
     } catch (error) {
       console.log(error);
+    }
+  };
+  const toggleBookmark = async (tweetId: string) => {
+    if (!user) return;
+    setBookmarked((prev) => !prev);
+    try {
+      const res = await axiosInstance.post(`/bookmark/${tweetId}`, {
+        userId: user._id,
+      });
+      const isBookmarked = res.data.bookmarked;
+      setBookmarked(isBookmarked);
+      onBookmarkChange?.(tweetId, isBookmarked);
+    } catch (error) {
+      console.log(error);
+      setBookmarked((prev) => !prev);
     }
   };
   const formatNumber = (num: number | undefined) => {
@@ -177,6 +201,22 @@ export default function TweetCard({ tweet }: { tweet: Tweet }) {
               >
                 <Heart className={`h-5 w-5 ${isLiked ? "fill-current" : ""}`} />
                 <span className="text-sm">{formatNumber(tweetstate.likes)}</span>
+              </button>
+
+              <button
+                className={`group flex items-center gap-1.5 rounded-full p-2 transition-all active:scale-90 ${
+                  bookmarked
+                    ? "text-blue-500"
+                    : "text-gray-500 hover:bg-blue-900/20 hover:text-blue-400"
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleBookmark(tweetstate._id);
+                }}
+              >
+                <Bookmark
+                  className={`h-5 w-5 ${bookmarked ? "fill-current" : ""}`}
+                />
               </button>
 
               <button

@@ -115,7 +115,9 @@ app.post("/follow/:targetId", async (req, res) => {
       return res.status(404).send({ error: "User not found" });
     }
 
-    const alreadyFollowing = target.followedBy.includes(userId);
+    const alreadyFollowing = target.followedBy.some((id) =>
+      id.equals(userId)
+    );
     if (alreadyFollowing) {
       target.followedBy.pull(userId);
       follower.following.pull(target._id);
@@ -125,6 +127,47 @@ app.post("/follow/:targetId", async (req, res) => {
     }
     await Promise.all([target.save(), follower.save()]);
     return res.status(200).send({ following: !alreadyFollowing });
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+// BOOKMARK / UNBOOKMARK
+app.post("/bookmark/:tweetId", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const tweet = await Tweet.findById(req.params.tweetId);
+    if (!tweet) {
+      return res.status(404).send({ error: "Tweet not found" });
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
+    const alreadyBookmarked = user.bookmarks.some((id) => id.equals(tweet._id));
+    if (alreadyBookmarked) {
+      user.bookmarks.pull(tweet._id);
+    } else {
+      user.bookmarks.push(tweet._id);
+    }
+    await user.save();
+    return res.status(200).send({ bookmarked: !alreadyBookmarked });
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+// get bookmarked tweets
+app.get("/bookmarks", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).send({ error: "userId is required" });
+    }
+    const user = await User.findById(userId).select("bookmarks");
+    const bookmarks = user?.bookmarks || [];
+    const tweets = await Tweet.find({ _id: { $in: bookmarks } })
+      .sort({ timestamp: -1 })
+      .populate("author");
+    return res.status(200).send(tweets);
   } catch (error) {
     return res.status(400).send({ error: error.message });
   }
