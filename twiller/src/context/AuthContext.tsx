@@ -22,6 +22,8 @@ interface User {
   email: string;
   website: string;
   location: string;
+  plan?: string;
+  tweetCount?: number;
 }
 
 interface AuthContextType {

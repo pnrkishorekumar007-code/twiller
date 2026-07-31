@@ -49,24 +49,25 @@ export default function TweetCard({ tweet }: any) {
   };
   const isLiked = tweetstate.likedBy?.includes(user?._id);
   const isRetweet = tweetstate.retweetedBy?.includes(user?._id);
+  const author = tweetstate.author;
+  const authorName = author?.displayName || "Unknown user";
+  const authorUsername = author?.username || "unknown";
+  const authorAvatar =
+    author?.avatar ||
+    "https://images.pexels.com/photos/1139743/pexels-photo-1139743.jpeg?auto=compress&cs=tinysrgb&w=400";
   return (
     <Card className="bg-black border-gray-800 border-x-0 border-t-0 rounded-none hover:bg-gray-950/50 transition-colors cursor-pointer">
       <CardContent className="p-4">
         <div className="flex space-x-3">
           <Avatar className="h-12 w-12">
-            <AvatarImage
-              src={tweetstate.author.avatar}
-              alt={tweetstate.author.displayName}
-            />
-            <AvatarFallback>{tweetstate.author.displayName}</AvatarFallback>
+            <AvatarImage src={authorAvatar} alt={authorName} />
+            <AvatarFallback>{authorName[0] || "?"}</AvatarFallback>
           </Avatar>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2 mb-2">
-              <span className="font-bold text-white">
-                {tweetstate.author.displayName}
-              </span>
-              {tweetstate.author.verified && (
+              <span className="font-bold text-white">{authorName}</span>
+              {author?.verified && (
                 <div className="bg-blue-500 rounded-full p-0.5">
                   <svg
                     className="h-4 w-4 text-white fill-current"
@@ -76,9 +77,7 @@ export default function TweetCard({ tweet }: any) {
                   </svg>
                 </div>
               )}
-              <span className="text-gray-500">
-                @{tweetstate.author.username}
-              </span>
+              <span className="text-gray-500">@{authorUsername}</span>
               <span className="text-gray-500">·</span>
               <span className="text-gray-500">
                 {tweetstate.timestamp &&
@@ -140,8 +139,8 @@ export default function TweetCard({ tweet }: any) {
               >
                 <Repeat2
                   className={`h-5 w-5 ${
-                    tweet.retweeted
-                      ? "text-green-400"
+                    isRetweet
+                      ? "text-green-400 fill-current"
                       : "group-hover:text-green-400"
                   }`}
                 />
@@ -163,7 +162,7 @@ export default function TweetCard({ tweet }: any) {
               >
                 <Heart
                   className={`h-5 w-5 ${
-                    tweetstate.liked
+                    isLiked
                       ? "text-red-500 fill-current"
                       : "group-hover:text-red-400"
                   }`}

@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 
 import {
   Home,
@@ -11,7 +12,8 @@ import {
   User,
   MoreHorizontal,
   Settings,
-  LogOut
+  LogOut,
+  Crown
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -74,7 +76,14 @@ export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarPro
         </ul>
         
         <div className="mt-8 px-2">
-          <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-full text-lg">
+          <Link
+            href="/pricing"
+            className="flex items-center w-full text-xl py-6 px-4 rounded-full hover:bg-gray-900 text-white font-semibold"
+          >
+            <Crown className="mr-4 h-7 w-7 text-blue-400" />
+            Premium
+          </Link>
+          <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-full text-lg mt-2">
             Post
           </Button>
         </div>
@@ -90,7 +99,7 @@ export default function Sidebar({ currentPage = 'home', onNavigate }: SidebarPro
               >
                 <Avatar className="h-10 w-10 mr-3">
                   <AvatarImage src={user.avatar} alt={user.displayName} />
-                  <AvatarFallback>{user.displayName[0]}</AvatarFallback>
+                  <AvatarFallback>{user.displayName?.[0] || "?"}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left">
                   <div className="text-white font-semibold">{user.displayName}</div>

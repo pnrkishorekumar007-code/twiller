@@ -8,29 +8,52 @@ import { Image, Smile, Calendar, MapPin, BarChart3, Globe } from "lucide-react";
 import { Separator } from "./ui/separator";
 import axios from "axios";
 import axiosInstance from "@/lib/axiosInstance";
+import Link from "next/link";
+
+const PLAN_LIMITS: Record<string, number | null> = {
+  free: 1,
+  bronze: 3,
+  silver: 5,
+  gold: null,
+};
+
 const TweetComposer = ({ onTweetPosted }: any) => {
   const { user } = useAuth();
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [imageurl, setimageurl] = useState("");
   const maxLength = 200;
+
+  const planLimit = user?.plan ? (PLAN_LIMITS[user.plan] ?? 1) : 1;
+  const tweetsUsed = user?.tweetCount ?? 0;
+  const remaining =
+    planLimit === null ? Infinity : Math.max(0, planLimit - tweetsUsed);
+  const limitReached = planLimit !== null && tweetsUsed >= planLimit;
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    if(!user || !content.trim())return
+    if (!user || !content.trim()) return;
+    if (isLoading) return;
+    if (limitReached) return;
+    setIsLoading(true);
     try {
-      const tweetdata={
-        author:user?._id,
+      const tweetdata = {
+        author: user?._id,
         content,
-        image:imageurl
+        image: imageurl,
+      };
+      const res = await axiosInstance.post("/post", tweetdata);
+      onTweetPosted(res.data);
+      setContent("");
+      setimageurl("");
+    } catch (error: any) {
+      if (error.response?.status === 403 && error.response?.data?.error) {
+        alert(error.response.data.error);
+      } else {
+        console.log(error);
       }
-      const res=await axiosInstance.post('/post',tweetdata)
-      onTweetPosted(res.data)
-      setContent("")
-      setimageurl("")
-    } catch (error) {
-      console.log(error)
-    }finally{
-      setIsLoading(false)
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -46,7 +69,7 @@ const TweetComposer = ({ onTweetPosted }: any) => {
     formdataimg.set("image", image);
     try {
       const res = await axios.post(
-        "https://api.imgbb.com/1/upload?key=f21cc2cae66e4437ae46a874e6ea327c",
+        `https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`,
         formdataimg
       );
       const url = res.data.data.display_url;
@@ -65,7 +88,7 @@ const TweetComposer = ({ onTweetPosted }: any) => {
         <div className="flex space-x-4">
           <Avatar className="h-12 w-12">
             <AvatarImage src={user.avatar} alt={user.displayName} />
-            <AvatarFallback>{user.displayName[0]}</AvatarFallback>
+            <AvatarFallback>{user.displayName?.[0] || "?"}</AvatarFallback>
           </Avatar>
 
           <div className="flex-1">
@@ -185,12 +208,23 @@ const TweetComposer = ({ onTweetPosted }: any) => {
 
                     <Button
                       type="submit"
-                      disabled={!content.trim() || isOverLimit|| isLoading}
+                      disabled={!content.trim() || isOverLimit || isLoading || limitReached}
                       className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 text-white font-semibold rounded-full px-6"
                     >
                       Post
                     </Button>
                   </div>
+                  {limitReached && (
+                    <div className="mt-3 p-3 bg-red-900/20 border border-red-800 rounded-lg text-sm text-red-400 flex flex-col sm:flex-row sm:items-center gap-2">
+                      <span>Tweet limit reached for your plan.</span>
+                      <Link
+                        href="/pricing"
+                        className="text-blue-400 font-semibold hover:underline"
+                      >
+                        Upgrade your plan
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </form>

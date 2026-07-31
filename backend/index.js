@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import User from "./models/user.js";
 import Tweet from "./models/tweet.js";
+import paymentRouter from "./routes/payment.js";
 dotenv.config();
 const app = express();
 app.use(cors());
@@ -34,6 +35,12 @@ app.post("/register", async (req, res) => {
     const existinguser = await User.findOne({ email: req.body.email });
     if (existinguser) {
       return res.status(200).send(existinguser);
+    }
+    if (req.body.username) {
+      const existingUsername = await User.findOne({ username: req.body.username });
+      if (existingUsername) {
+        return res.status(409).send({ error: "Username already taken" });
+      }
     }
     const newUser = new User(req.body);
     await newUser.save();
@@ -72,13 +79,52 @@ app.patch("/userdata/:email", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
+// Payment API
+app.use("/payment", paymentRouter);
+
 // Tweet API
+
+const PLAN_LIMITS = { free: 1, bronze: 3, silver: 5, gold: Infinity };
+const PLAN_RESET_DAYS = 30;
 
 // POST
 app.post("/post", async (req, res) => {
   try {
+    const { content } = req.body;
+    if (!content || !content.trim()) {
+      return res.status(400).send({ error: "Tweet content is required" });
+    }
+    if (content.length > 200) {
+      return res.status(400).send({
+        error: "Tweet content must be 200 characters or less",
+      });
+    }
+
+    const author = await User.findById(req.body.author);
+    if (!author) {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    const now = Date.now();
+    if (now - new Date(author.planRenewedAt).getTime() >= PLAN_RESET_DAYS * 24 * 60 * 60 * 1000) {
+      author.tweetCount = 0;
+      author.planRenewedAt = new Date();
+      await author.save();
+    }
+
+    const limit = PLAN_LIMITS[author.plan] ?? PLAN_LIMITS.free;
+    if (author.tweetCount >= limit) {
+      return res.status(403).send({
+        error: "Tweet limit reached for your plan. Upgrade to post more.",
+      });
+    }
+
     const tweet = new Tweet(req.body);
     await tweet.save();
+
+    author.tweetCount += 1;
+    await author.save();
+
     return res.status(201).send(tweet);
   } catch (error) {
     return res.status(400).send({ error: error.message });
@@ -88,6 +134,17 @@ app.post("/post", async (req, res) => {
 app.get("/post", async (req, res) => {
   try {
     const tweet = await Tweet.find().sort({ timestamp: -1 }).limit(50).populate("author");
+    return res.status(200).send(tweet);
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+// get tweets by user
+app.get("/post/user/:userId", async (req, res) => {
+  try {
+    const tweet = await Tweet.find({ author: req.params.userId })
+      .sort({ timestamp: -1 })
+      .populate("author");
     return res.status(200).send(tweet);
   } catch (error) {
     return res.status(400).send({ error: error.message });

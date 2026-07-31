@@ -71,7 +71,7 @@ export default function RightSidebar() {
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={user.avatar} alt={user.displayName} />
-                    <AvatarFallback>{user.displayName[0]}</AvatarFallback>
+                    <AvatarFallback>{user.displayName?.[0] || "?"}</AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="flex items-center space-x-1">

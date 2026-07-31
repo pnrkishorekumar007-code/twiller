@@ -1,5 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
-import { storage } from "@/context/firebase";
+import { auth, db, storage } from "@/context/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -9,7 +10,7 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import LoadingSpinner from "./loading-spinner";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL, type UploadTask } from "firebase/storage";
 import axiosInstance from "@/lib/axiosInstance";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -42,6 +43,53 @@ function compressImage(file: File, maxDim: number): Promise<Blob> {
     };
     img.onerror = () => reject(new Error("Failed to load image"));
     img.src = URL.createObjectURL(file);
+  });
+}
+
+function uploadImage(
+  task: UploadTask,
+  onProgress: (progress: number) => void,
+  timeoutMs = 60000
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      task.cancel();
+      reject(new Error("Image upload timed out. Please try again."));
+    }, timeoutMs);
+
+    task.on(
+      "state_changed",
+      (snapshot) => {
+        const progress = Math.round(
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+        );
+        onProgress(progress);
+        console.log("Upload Progress", progress);
+      },
+      (err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        console.error("Upload Error", err);
+        reject(new Error(`Upload failed: ${err.message}`));
+      },
+      async () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        try {
+          const url = await getDownloadURL(task.snapshot.ref);
+          console.log("Upload Complete");
+          console.log("Download URL", url);
+          resolve(url);
+        } catch (err) {
+          reject(err);
+        }
+      }
+    );
   });
 }
 
@@ -152,41 +200,20 @@ const Editprofile = ({ isopen, onclose }: any) => {
 
     try {
       if (selectedFile) {
-        console.log("Image Upload Started");
-        try {
-          const compressed = await compressImage(selectedFile, MAX_DIM);
-          const timestamp = Date.now();
-          const storageRef = ref(storage, `users/${user.email.replace(/[^a-zA-Z0-9]/g, "_")}/profile-${timestamp}`);
-          const uploadTask = uploadBytesResumable(storageRef, compressed, {
-            contentType: selectedFile.type,
-          });
+        console.log("Upload Started");
+        const compressed = await compressImage(selectedFile, MAX_DIM);
+        const timestamp = Date.now();
+        const storageRef = ref(
+          storage,
+          `users/${user.email.replace(/[^a-zA-Z0-9]/g, "_")}/profile-${timestamp}`
+        );
+        const uploadTask = uploadBytesResumable(storageRef, compressed, {
+          contentType: selectedFile.type,
+        });
 
-          resolvedAvatar = await new Promise<string>((resolve, reject) => {
-            uploadTask.on(
-              "state_changed",
-              (snapshot) => {
-                setUploadProgress(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100));
-              },
-              (err) => {
-                reject(new Error(`Upload failed: ${err.message}`));
-              },
-              async () => {
-                try {
-                  resolve(await getDownloadURL(uploadTask.snapshot.ref));
-                } catch (err) {
-                  reject(err);
-                }
-              }
-            );
-          });
-          console.log("Image Upload Completed:", resolvedAvatar);
-        } catch (uploadErr: any) {
-          console.error("Image upload failed, keeping original avatar:", uploadErr);
-          setError({ avatar: "Image upload failed. Profile saved without new image." });
-        }
+        resolvedAvatar = await uploadImage(uploadTask, setUploadProgress);
       }
 
-      console.log("Backend Sync Started");
       const updatedData = {
         displayName: formData.displayName,
         bio: formData.bio,
@@ -194,18 +221,47 @@ const Editprofile = ({ isopen, onclose }: any) => {
         website: formData.website,
         avatar: resolvedAvatar,
       };
-      await axiosInstance.patch(`/userdata/${user.email}`, updatedData);
-      console.log("Backend Sync Completed");
+
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        console.log("Firestore Update Started");
+        await setDoc(
+          doc(db, "users", uid),
+          {
+            photoURL: resolvedAvatar,
+            displayName: formData.displayName,
+            username: user.username,
+            bio: formData.bio,
+            location: formData.location,
+            website: formData.website,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        console.log("Firestore Update Complete");
+      } else {
+        console.warn("No Firebase uid found; skipping Firestore update");
+      }
+
+      console.log("Backend Sync Started");
+      try {
+        await axiosInstance.patch(`/userdata/${user.email}`, updatedData);
+        console.log("Backend Sync Completed");
+      } catch (syncErr: any) {
+        console.warn("Backend sync failed (Firestore still updated):", syncErr);
+      }
 
       const updatedUser = { ...user, ...updatedData };
       setUser(updatedUser);
       localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
 
-      console.log("Profile Update Successful");
+      console.log("Profile Save Success");
       onclose();
     } catch (err: any) {
       console.error("Profile Update Failed:", err);
-      setError({ general: err.message || "Failed to update profile. Please try again." });
+      setError({
+        general: err.message || "Failed to update profile. Please try again.",
+      });
     } finally {
       setSaving(false);
       setUploadProgress(0);

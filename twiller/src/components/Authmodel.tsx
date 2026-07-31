@@ -12,6 +12,7 @@ import { Input } from './ui/input';
 import { Separator } from './ui/separator';
 import { useAuth } from '@/context/AuthContext';
 import TwitterLogo from './Twitterlogo';
+import { getFirebaseErrorMessage } from '@/lib/firebaseErrors';
 
 
 
@@ -82,7 +83,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
       setFormData({ email: '', password: '', username: '', displayName: '' });
       setErrors({});
     } catch (error) {
-      setErrors({ general: 'Authentication failed. Please try again.' });
+      setErrors({ general: getFirebaseErrorMessage(error) });
     }
   };
 

@@ -28,9 +28,10 @@ export default function ProfilePage() {
   const [loading, setloading] = useState(false);
 
   const fetchTweets = async () => {
+    if (!user) return;
     try {
       setloading(true);
-      const res = await axiosInstance.get("/post");
+      const res = await axiosInstance.get(`/post/user/${user._id}`);
       setTweets(res.data);
     } catch (error) {
       console.error(error);
@@ -39,12 +40,12 @@ export default function ProfilePage() {
     }
   };
   useEffect(() => {
-    fetchTweets();
+    if (user) fetchTweets();
   }, []);
 
   if (!user) return null;
 
-  const userTweets = tweets.filter((tweet: any) => tweet.author._id === user._id);
+  const userTweets = tweets;
 
   return (
     <div className="min-h-screen">
@@ -84,7 +85,7 @@ export default function ProfilePage() {
             <Avatar className="h-32 w-32 border-4 border-black">
               <AvatarImage src={user.avatar} alt={user.displayName} />
               <AvatarFallback className="text-2xl">
-                {user.displayName[0]}
+                {user.displayName?.[0] || "?"}
               </AvatarFallback>
             </Avatar>
             <Button

@@ -5,6 +5,7 @@ import LoadingSpinner from "../loading-spinner";
 import Sidebar from "./Sidebar";
 import RightSidebar from "./Rightsidebar";
 import ProfilePage from "../ProfilePage";
+import { Card, CardContent } from "../ui/card";
 
 const Mainlayout = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
@@ -32,7 +33,25 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
         <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
       </div>
       <main className="flex-1 max-w-2xl border-x border-gray-800">
-        {currentPage ==="profile" ? <ProfilePage/> :children}
+        {currentPage === "profile" ? (
+          <ProfilePage />
+        ) : currentPage === "home" ? (
+          children
+        ) : (
+          <div className="min-h-screen flex items-center justify-center">
+            <Card className="bg-black border-gray-800 text-center">
+              <CardContent className="py-16 px-10">
+                <p className="text-5xl mb-4">🚧</p>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Coming soon
+                </h2>
+                <p className="text-gray-400">
+                  This page is under construction.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
       <div className="hidden lg:block w-80 p-4">
         <RightSidebar />
