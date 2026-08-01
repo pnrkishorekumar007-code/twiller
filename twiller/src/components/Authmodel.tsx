@@ -25,7 +25,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalProps) {
-  const { login, signup, isLoading } = useAuth();
+  const { login, signup, isLoading, authStatus, slowConnect } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
@@ -169,7 +169,16 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         <CardContent className="space-y-6">
           {errors.general && (
             <div className="bg-red-900/20 border border-red-800 rounded-lg p-3 text-red-400 text-sm">
-              {errors.general}
+              <div>{errors.general}</div>
+              {authStatus === 'error' && (
+                <button
+                  type="button"
+                  className="mt-2 font-semibold text-white underline underline-offset-2 hover:text-blue-300 transition-colors"
+                  onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+                >
+                  Try again
+                </button>
+              )}
             </div>
           )}
 
@@ -301,6 +310,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
               </div>
             )}
 
+            {authStatus === 'verifying' && (
+              <div className="rounded-lg border border-blue-800 bg-blue-900/20 p-3 text-sm text-blue-300">
+                {slowConnect
+                  ? 'Still connecting... the server may be waking up, please wait a little longer.'
+                  : 'Connecting to server — this can take up to a minute on first login.'}
+              </div>
+            )}
+
             <Button
               type="submit"
               className="w-full rounded-full bg-blue-500 py-3 text-lg font-semibold text-white transition-all hover:bg-blue-600 active:scale-[0.98]"
@@ -309,7 +326,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
               {isLoading ? (
                 <div className="flex items-center space-x-2">
                   <LoadingSpinner size="sm" />
-                  <span>{mode === 'login' ? 'Signing in...' : 'Creating account...'}</span>
+                  <span>
+                    {authStatus === 'verifying'
+                      ? 'Connecting to server...'
+                      : mode === 'login'
+                        ? 'Signing in...'
+                        : 'Creating account...'}
+                  </span>
                 </div>
               ) : (
                 mode === 'login' ? 'Sign in' : 'Create account'

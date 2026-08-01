@@ -62,6 +62,8 @@ interface AuthContextType {
   otpPending: boolean;
   verifyLoginOtp: (otp: string) => Promise<void>;
   cancelLoginOtp: () => Promise<void>;
+  authStatus: "idle" | "signing-in" | "verifying" | "error";
+  slowConnect: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,6 +82,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [otpPending, setOtpPending] = useState(false);
+  const [authStatus, setAuthStatus] = useState<
+    "idle" | "signing-in" | "verifying" | "error"
+  >("idle");
+  const [slowConnect, setSlowConnect] = useState(false);
   const loginFlowRef = useRef(false);
   const { toast } = useToast();
 
@@ -107,6 +113,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
     return res.data;
   };
+
+  // If the backend call is still running after 60s, the Render free-tier
+  // server is likely cold-starting — surface a reassuring message.
+  useEffect(() => {
+    if (authStatus !== "verifying") {
+      setSlowConnect(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlowConnect(true), 60000);
+    return () => clearTimeout(timer);
+  }, [authStatus]);
 
   useEffect(() => {
     // Check for existing session
@@ -147,10 +164,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
+    setAuthStatus("signing-in");
     loginFlowRef.current = true;
     try {
       const usercred = await signInWithEmailAndPassword(auth, email, password);
       const firebaseuser = usercred.user;
+      setAuthStatus("verifying");
 
       const gate = await gateLogin();
 
@@ -164,6 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (gate === "otpRequired") {
         setOtpPending(true);
         sessionStorage.setItem(PENDING_OTP_KEY, "1");
+        setAuthStatus("idle");
         return;
       }
 
@@ -175,6 +195,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setUser(res);
         localStorage.setItem("twitter-user", JSON.stringify(res));
       }
+      setAuthStatus("idle");
+    } catch (err) {
+      setAuthStatus("error");
+      throw err;
     } finally {
       loginFlowRef.current = false;
       setIsLoading(false);
@@ -189,37 +213,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     phone?: string
   ) => {
     setIsLoading(true);
-    // Mock authentication - in real app, this would call an API
-    const usercred = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-    const user = usercred.user;
-    const newuser: Partial<User> = {
-      username,
-      displayName,
-      avatar: user.photoURL || "https://images.pexels.com/photos/1139743/pexels-photo-1139743.jpeg?auto=compress&cs=tinysrgb&w=400",
-      email: user.email ?? undefined,
-    };
-    const trimmedPhone = phone?.trim();
-    if (trimmedPhone) {
-      newuser.phone = trimmedPhone;
+    setAuthStatus("signing-in");
+    try {
+      const usercred = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      setAuthStatus("verifying");
+      const user = usercred.user;
+      const newuser: Partial<User> = {
+        username,
+        displayName,
+        avatar: user.photoURL || "https://images.pexels.com/photos/1139743/pexels-photo-1139743.jpeg?auto=compress&cs=tinysrgb&w=400",
+        email: user.email ?? undefined,
+      };
+      const trimmedPhone = phone?.trim();
+      if (trimmedPhone) {
+        newuser.phone = trimmedPhone;
+      }
+      const res = await axiosInstance.post("/register", newuser);
+      if (res.data) {
+        setUser(res.data);
+        localStorage.setItem("twitter-user", JSON.stringify(res.data));
+      }
+      setAuthStatus("idle");
+    } catch (err) {
+      setAuthStatus("error");
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
-    const res = await axiosInstance.post("/register", newuser);
-    if (res.data) {
-      setUser(res.data);
-      localStorage.setItem("twitter-user", JSON.stringify(res.data));
-    }
-    // const mockUser: User = {
-    //   id: '1',
-    //   username,
-    //   displayName,
-    //   avatar: 'https://images.pexels.com/photos/1139743/pexels-photo-1139743.jpeg?auto=compress&cs=tinysrgb&w=400',
-    //   bio: '',
-    //   joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    // };
-    setIsLoading(false);
   };
 
   const logout = async () => {
@@ -262,6 +286,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
   const googlesignin = async () => {
     setIsLoading(true);
+    setAuthStatus("signing-in");
     loginFlowRef.current = true;
 
     try {
@@ -272,6 +297,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!firebaseuser?.email) {
         throw new Error("No email found in Google account");
       }
+
+      setAuthStatus("verifying");
 
       let userData: User | undefined;
 
@@ -304,6 +331,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       if (gate === "otpRequired") {
         setOtpPending(true);
         sessionStorage.setItem(PENDING_OTP_KEY, "1");
+        setAuthStatus("idle");
         return;
       }
 
@@ -314,7 +342,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } else {
         throw new Error("Login/Register failed: No user data returned");
       }
+      setAuthStatus("idle");
     } catch (error: unknown) {
+      setAuthStatus("error");
       console.error("Google Sign-In Error:", error);
       const axiosErr = error as {
         response?: { data?: { error?: string } };
@@ -382,6 +412,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         otpPending,
         verifyLoginOtp,
         cancelLoginOtp,
+        authStatus,
+        slowConnect,
       }}
     >
       {children}
