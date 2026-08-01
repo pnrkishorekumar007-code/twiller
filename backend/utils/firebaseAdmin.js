@@ -13,7 +13,7 @@ function getFirebaseAdmin() {
 
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
     console.warn(
-      "⚠️ FIREBASE_SERVICE_ACCOUNT_KEY is not set. Password reset will be unavailable."
+      "⚠️ FIREBASE_SERVICE_ACCOUNT_KEY is not set. Auth endpoints (/register, /loggedinuser, etc.) will return 500. Add it to the server environment and redeploy."
     );
     return null;
   }
@@ -25,7 +25,10 @@ function getFirebaseAdmin() {
       credential: cert(serviceAccount),
     });
   } catch (error) {
-    console.error("⚠️ Failed to initialize Firebase Admin SDK:", error);
+    console.error(
+      "⚠️ Failed to initialize Firebase Admin SDK. The FIREBASE_SERVICE_ACCOUNT_KEY env var is likely missing or is not a valid single-line JSON (check for line breaks / quotes):",
+      error
+    );
     return null;
   }
 

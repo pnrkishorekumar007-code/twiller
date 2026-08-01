@@ -31,6 +31,12 @@ interface FirebaseLikeError {
 
 export function getFirebaseErrorMessage(error: unknown): string {
   const err = (error ?? null) as FirebaseLikeError | null;
+  const serverMsg = (err as {
+    response?: { data?: { error?: string } };
+  } | null)?.response?.data?.error;
+  if (serverMsg) {
+    return serverMsg;
+  }
   const code = err?.code;
   if (code && FIREBASE_ERROR_MESSAGES[code]) {
     return FIREBASE_ERROR_MESSAGES[code];

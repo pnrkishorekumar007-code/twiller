@@ -48,7 +48,10 @@ app.post("/register", async (req, res) => {
 
     const app = getFirebaseAdmin();
     if (!app) {
-      return res.status(500).json({ error: "Auth service unavailable" });
+      return res.status(500).json({
+        error:
+          "Server authentication is misconfigured (FIREBASE_SERVICE_ACCOUNT_KEY missing or invalid).",
+      });
     }
 
     const decoded = await getAuth(app).verifyIdToken(token);

@@ -235,10 +235,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (error: unknown) {
       console.error("Google Sign-In Error:", error);
+      const axiosErr = error as {
+        response?: { data?: { error?: string } };
+      };
       const msg =
-        error instanceof Error
+        axiosErr?.response?.data?.error ||
+        (error instanceof Error
           ? error.message
-          : "Login failed. Please try again.";
+          : "Login failed. Please try again.");
       toast(msg, "error");
     } finally {
       setIsLoading(false);
