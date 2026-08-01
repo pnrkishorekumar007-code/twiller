@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./loadEnv.js";
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -20,6 +20,24 @@ app.use(express.json());
 
 app.get("/", (req, res) => {
   res.send("Tiller backend is running successfully");
+});
+
+app.get("/health", (req, res) => {
+  let firebaseStatus = "not initialized";
+  try {
+    const admin = getFirebaseAdmin();
+    firebaseStatus = admin ? "configured" : "missing or invalid FIREBASE_SERVICE_ACCOUNT_KEY";
+  } catch (err) {
+    firebaseStatus = "error: " + err.message;
+  }
+  res.status(200).json({
+    status: "ok",
+    firebaseAdmin: firebaseStatus,
+    mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    razorpayKey: process.env.RAZORPAY_KEY_ID ? "configured" : "missing",
+    smtp: process.env.SMTP_HOST ? "configured" : "missing",
+    port: process.env.PORT || "default",
+  });
 });
 
 const port = process.env.PORT || 5000;
