@@ -11,9 +11,11 @@ import NotificationsPage from "../NotificationsPage";
 import MessagesPage from "../MessagesPage";
 import UserProfilePage from "../UserProfilePage";
 import { NavProvider } from "@/context/NavContext";
+import { useKeywordNotifications } from "@/hooks/useKeywordNotifications";
 
 const Mainlayout = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
+  useKeywordNotifications();
   const [currentPage, setCurrentPage] = useState("home");
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

@@ -34,6 +34,7 @@ interface User {
   phone?: string;
   plan?: string;
   tweetCount?: number;
+  notificationsEnabled?: boolean;
   following?: string[];
   followedBy?: string[];
 }

@@ -12,9 +12,11 @@ import {
   Monitor,
   Smartphone,
   Tablet,
+  Bell,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNav } from "@/context/NavContext";
+import { useToast } from "@/context/ToastContext";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -37,8 +39,9 @@ interface LoginHistoryEntry {
 }
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { goBack } = useNav();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("posts");
   const [showEditModal, setShowEditModal] = useState(false);
   const [tweets, setTweets] = useState<Tweet[]>([]);
@@ -65,6 +68,37 @@ export default function ProfilePage() {
       console.error("Failed to fetch login history:", error);
     }
   };
+
+  const handleNotificationToggle = async (enabled: boolean) => {
+    if (!user) return;
+    if (enabled) {
+      if (!("Notification" in window)) {
+        toast("Your browser doesn't support notifications.", "error");
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        toast(
+          "Notifications were blocked. Enable them in your browser settings to use this feature.",
+          "error"
+        );
+        return;
+      }
+    }
+    try {
+      await axiosInstance.patch(`/userdata/${user.email}`, {
+        notificationsEnabled: enabled,
+      });
+      const updatedUser = { ...user, notificationsEnabled: enabled };
+      setUser(updatedUser);
+      localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
+      toast(enabled ? "Notifications enabled" : "Notifications disabled", "success");
+    } catch (error) {
+      console.error("Failed to update notification preference:", error);
+      toast("Failed to update notification preference. Try again.", "error");
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchTweets();
@@ -213,6 +247,63 @@ export default function ProfilePage() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Keyword Notifications */}
+      <div className="px-4 pb-6">
+        <Card className="bg-black border-gray-800">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start space-x-3">
+                <Bell className="mt-0.5 h-5 w-5 text-blue-400 shrink-0" />
+                <div>
+                  <p className="font-semibold text-white">
+                    Notify me about cricket/science tweets
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Get a browser popup when someone posts a tweet mentioning
+                    &quot;cricket&quot; or &quot;science&quot;.
+                  </p>
+                  {user.notificationsEnabled &&
+                    !("Notification" in window) &&
+                    typeof window !== "undefined" && (
+                      <p className="mt-1 text-xs text-yellow-400">
+                        Your browser doesn&apos;t support notifications.
+                      </p>
+                    )}
+                  {user.notificationsEnabled &&
+                    "Notification" in window &&
+                    Notification.permission !== "granted" && (
+                      <p className="mt-1 text-xs text-yellow-400">
+                        Notifications are blocked in your browser. Enable them in
+                        your browser settings to receive popups.
+                      </p>
+                    )}
+                </div>
+              </div>
+              <button
+                role="switch"
+                aria-checked={!!user.notificationsEnabled}
+                onClick={() =>
+                  handleNotificationToggle(!user.notificationsEnabled)
+                }
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                  user.notificationsEnabled
+                    ? "bg-blue-500"
+                    : "bg-gray-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                    user.notificationsEnabled
+                      ? "translate-x-5"
+                      : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Login History */}
