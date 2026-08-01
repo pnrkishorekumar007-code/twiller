@@ -23,6 +23,7 @@ interface User {
   email: string;
   website: string;
   location: string;
+  phone?: string;
   plan?: string;
   tweetCount?: number;
   following?: string[];
@@ -36,7 +37,8 @@ interface AuthContextType {
     email: string,
     password: string,
     username: string,
-    displayName: string
+    displayName: string,
+    phone?: string
   ) => Promise<void>;
   updateProfile: (profileData: {
     displayName: string;
@@ -120,7 +122,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     email: string,
     password: string,
     username: string,
-    displayName: string
+    displayName: string,
+    phone?: string
   ) => {
     setIsLoading(true);
     // Mock authentication - in real app, this would call an API
@@ -136,6 +139,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       avatar: user.photoURL || "https://images.pexels.com/photos/1139743/pexels-photo-1139743.jpeg?auto=compress&cs=tinysrgb&w=400",
       email: user.email ?? undefined,
     };
+    const trimmedPhone = phone?.trim();
+    if (trimmedPhone) {
+      newuser.phone = trimmedPhone;
+    }
     const res = await axiosInstance.post("/register", newuser);
     if (res.data) {
       setUser(res.data);

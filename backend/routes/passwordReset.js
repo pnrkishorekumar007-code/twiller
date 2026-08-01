@@ -7,6 +7,7 @@ import getFirebaseAdmin from "../utils/firebaseAdmin.js";
 import { getAuth } from "firebase-admin/auth";
 import { generatePassword } from "../utils/generatePassword.js";
 import { sendPasswordResetEmail } from "../utils/mailer.js";
+import { normalizePhone } from "../utils/phone.js";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -20,16 +21,25 @@ function sameISTDay(a, b) {
     dayjs(b).tz("Asia/Kolkata").format("YYYY-MM-DD");
 }
 
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 router.post("/forgot-password", async (req, res) => {
   try {
-    const { identifier } = req.body;
+    const identifier = (req.body.identifier || "").toString().trim();
 
-    if (!identifier || !identifier.trim()) {
+    if (!identifier) {
       return res.status(400).json({ error: "identifier is required" });
     }
 
+    const normalizedPhone = normalizePhone(identifier);
+
     const user = await User.findOne({
-      $or: [{ email: identifier }, { phone: identifier }],
+      $or: [
+        { email: { $regex: new RegExp(`^${escapeRegex(identifier)}$`, "i") } },
+        { phone: normalizedPhone || identifier },
+      ],
     });
 
     if (!user) {
@@ -60,18 +70,17 @@ router.post("/forgot-password", async (req, res) => {
     const firebaseUser = await auth.getUserByEmail(user.email);
     await auth.updateUser(firebaseUser.uid, { password: newPassword });
 
-    user.lastPasswordResetRequestAt = new Date();
-    await user.save();
-
     try {
       await sendPasswordResetEmail({
         to: user.email,
         username: user.username,
         newPassword,
       });
+      user.lastPasswordResetRequestAt = new Date();
+      await user.save();
     } catch (emailErr) {
       console.error(
-        `⚠️ Password reset email failed to send to ${user.email}. The password was already changed.`,
+        `⚠️ Password reset email failed to send to ${user.email}. The password was already changed; the user was NOT rate-limited so they can retry.`,
         emailErr
       );
     }

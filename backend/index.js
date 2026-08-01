@@ -9,6 +9,10 @@ import Conversation from "./models/conversation.js";
 import Comment from "./models/comment.js";
 import paymentRouter from "./routes/payment.js";
 import passwordResetRouter from "./routes/passwordReset.js";
+import { verifyAuth } from "./middleware/verifyAuth.js";
+import getFirebaseAdmin from "./utils/firebaseAdmin.js";
+import { getAuth } from "firebase-admin/auth";
+import { normalizePhone } from "./utils/phone.js";
 
 const app = express();
 app.use(cors());
@@ -33,10 +37,30 @@ mongoose
     console.error("❌ MongoDB connection error:", err.message);
   });
 
-//Register
+//Register (auth bootstrap: links a freshly created Firebase account to a Mongo doc)
 app.post("/register", async (req, res) => {
   try {
-    const existinguser = await User.findOne({ email: req.body.email });
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token) {
+      return res.status(401).json({ error: "Missing auth token" });
+    }
+
+    const app = getFirebaseAdmin();
+    if (!app) {
+      return res.status(500).json({ error: "Auth service unavailable" });
+    }
+
+    const decoded = await getAuth(app).verifyIdToken(token);
+
+    let existinguser = await User.findOne({ firebaseUid: decoded.uid });
+    if (!existinguser && decoded.email) {
+      existinguser = await User.findOne({ email: decoded.email });
+      if (existinguser) {
+        existinguser.firebaseUid = decoded.uid;
+        await existinguser.save();
+      }
+    }
     if (existinguser) {
       return res.status(200).send(existinguser);
     }
@@ -46,25 +70,55 @@ app.post("/register", async (req, res) => {
         return res.status(409).send({ error: "Username already taken" });
       }
     }
-    const newUser = new User(req.body);
-    await newUser.save();
+
+    let normalizedPhone = null;
+    if (req.body.phone) {
+      normalizedPhone = normalizePhone(req.body.phone);
+      if (!normalizedPhone) {
+        return res.status(400).send({ error: "Invalid phone number format" });
+      }
+      const existingPhone = await User.findOne({ phone: normalizedPhone });
+      if (existingPhone) {
+        return res.status(409).send({ error: "Phone number is already registered" });
+      }
+    }
+
+    const newUserData = {
+      username: req.body.username,
+      displayName: req.body.displayName,
+      avatar: req.body.avatar,
+      email: decoded.email,
+      firebaseUid: decoded.uid,
+    };
+    if (normalizedPhone) {
+      newUserData.phone = normalizedPhone;
+    }
+    const newUser = new User(newUserData);
+    try {
+      await newUser.save();
+    } catch (saveError) {
+      if (saveError.code === 11000) {
+        return res
+          .status(409)
+          .send({ error: "Username or phone number is already registered" });
+      }
+      throw saveError;
+    }
     return res.status(201).send(newUser);
   } catch (error) {
+    if (
+      error.code === "auth/id-token-expired" ||
+      error.code === "auth/argument-error"
+    ) {
+      return res.status(401).json({ error: "Invalid or expired auth token" });
+    }
     return res.status(400).send({ error: error.message });
   }
 });
 // loggedinuser
-app.get("/loggedinuser", async (req, res) => {
+app.get("/loggedinuser", verifyAuth, async (req, res) => {
   try {
-    const { email } = req.query;
-    if (!email) {
-      return res.status(400).send({ error: "Email required" });
-    }
-    const user = await User.findOne({ email: email });
-    if (!user) {
-      return res.status(404).send({ error: "User not found" });
-    }
-    return res.status(200).send(user);
+    return res.status(200).send(req.authUser);
   } catch (error) {
     return res.status(400).send({ error: error.message });
   }
@@ -142,20 +196,17 @@ app.get("/user/:id", async (req, res) => {
   }
 });
 // FOLLOW / UNFOLLOW
-app.post("/follow/:targetId", async (req, res) => {
+app.post("/follow/:targetId", verifyAuth, async (req, res) => {
   try {
-    const { userId } = req.body;
-    if (!userId || userId === req.params.targetId) {
+    const userId = req.authUser._id;
+    if (String(userId) === String(req.params.targetId)) {
       return res.status(400).send({ error: "Invalid follow request" });
     }
     const target = await User.findById(req.params.targetId);
     if (!target) {
       return res.status(404).send({ error: "User not found" });
     }
-    const follower = await User.findById(userId);
-    if (!follower) {
-      return res.status(404).send({ error: "User not found" });
-    }
+    const follower = req.authUser;
 
     const alreadyFollowing = target.followedBy.some((id) =>
       id.equals(userId)
@@ -179,17 +230,14 @@ app.post("/follow/:targetId", async (req, res) => {
   }
 });
 // BOOKMARK / UNBOOKMARK
-app.post("/bookmark/:tweetId", async (req, res) => {
+app.post("/bookmark/:tweetId", verifyAuth, async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.authUser._id;
     const tweet = await Tweet.findById(req.params.tweetId);
     if (!tweet) {
       return res.status(404).send({ error: "Tweet not found" });
     }
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).send({ error: "User not found" });
-    }
+    const user = req.authUser;
     const alreadyBookmarked = user.bookmarks.some((id) => id.equals(tweet._id));
     if (alreadyBookmarked) {
       user.bookmarks.pull(tweet._id);
@@ -203,13 +251,9 @@ app.post("/bookmark/:tweetId", async (req, res) => {
   }
 });
 // get bookmarked tweets
-app.get("/bookmarks", async (req, res) => {
+app.get("/bookmarks", verifyAuth, async (req, res) => {
   try {
-    const { userId } = req.query;
-    if (!userId) {
-      return res.status(400).send({ error: "userId is required" });
-    }
-    const user = await User.findById(userId).select("bookmarks");
+    const user = req.authUser;
     const bookmarks = user?.bookmarks || [];
     const tweets = await Tweet.find({ _id: { $in: bookmarks } })
       .sort({ timestamp: -1 })
@@ -219,13 +263,17 @@ app.get("/bookmarks", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-// update Profile
-app.patch("/userdata/:email", async (req, res) => {
+// update Profile (only your own, only profile fields)
+app.patch("/userdata/:email", verifyAuth, async (req, res) => {
   try {
     const { email } = req.params;
-    const updated = await User.findOneAndUpdate(
-      { email },
-      { $set: req.body },
+    if (String(req.authUser.email).toLowerCase() !== String(email).toLowerCase()) {
+      return res.status(403).send({ error: "You can only edit your own profile" });
+    }
+    const { displayName, bio, location, website, avatar } = req.body;
+    const updated = await User.findByIdAndUpdate(
+      req.authUser._id,
+      { $set: { displayName, bio, location, website, avatar } },
       { new: true, upsert: false }
     );
     return res.status(200).send(updated);
@@ -244,9 +292,9 @@ const PLAN_LIMITS = { free: 1, bronze: 3, silver: 5, gold: Infinity };
 const PLAN_RESET_DAYS = 30;
 
 // POST
-app.post("/post", async (req, res) => {
+app.post("/post", verifyAuth, async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, image } = req.body;
     if (!content || !content.trim()) {
       return res.status(400).send({ error: "Tweet content is required" });
     }
@@ -256,10 +304,7 @@ app.post("/post", async (req, res) => {
       });
     }
 
-    const author = await User.findById(req.body.author);
-    if (!author) {
-      return res.status(404).send({ error: "User not found" });
-    }
+    const author = req.authUser;
 
     const now = Date.now();
     if (now - new Date(author.planRenewedAt).getTime() >= PLAN_RESET_DAYS * 24 * 60 * 60 * 1000) {
@@ -275,7 +320,7 @@ app.post("/post", async (req, res) => {
       });
     }
 
-    const tweet = new Tweet(req.body);
+    const tweet = new Tweet({ content, image, author: author._id });
     await tweet.save();
 
     author.tweetCount += 1;
@@ -332,12 +377,9 @@ app.get("/comments/:tweetId", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-app.post("/comments/:tweetId", async (req, res) => {
+app.post("/comments/:tweetId", verifyAuth, async (req, res) => {
   try {
-    const { author, content } = req.body;
-    if (!author) {
-      return res.status(400).send({ error: "author is required" });
-    }
+    const { content } = req.body;
     if (!content || !content.trim()) {
       return res.status(400).send({ error: "Comment content is required" });
     }
@@ -352,7 +394,7 @@ app.post("/comments/:tweetId", async (req, res) => {
     }
     const comment = await Comment.create({
       tweet: tweet._id,
-      author,
+      author: req.authUser._id,
       content,
     });
     tweet.comments += 1;
@@ -367,9 +409,9 @@ app.post("/comments/:tweetId", async (req, res) => {
   }
 });
 //  LIKE / UNLIKE TWEET
-app.post("/like/:tweeted", async (req, res) => {
+app.post("/like/:tweeted", verifyAuth, async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.authUser._id;
     const tweet = await Tweet.findById(req.params.tweeted);
     const alreadyLiked = tweet.likedBy.some((id) => id.equals(userId));
     if (alreadyLiked) {
@@ -394,9 +436,9 @@ app.post("/like/:tweeted", async (req, res) => {
   }
 });
 // RETWEET / UNRETWEET
-app.post("/retweet/:tweeted", async (req, res) => {
+app.post("/retweet/:tweeted", verifyAuth, async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.authUser._id;
     const tweet = await Tweet.findById(req.params.tweeted);
     const alreadyRetweeted = tweet.retweetedBy.some((id) => id.equals(userId));
     if (alreadyRetweeted) {
@@ -421,12 +463,9 @@ app.post("/retweet/:tweeted", async (req, res) => {
   }
 });
 // NOTIFICATIONS
-app.get("/notifications", async (req, res) => {
+app.get("/notifications", verifyAuth, async (req, res) => {
   try {
-    const { userId } = req.query;
-    if (!userId) {
-      return res.status(400).send({ error: "userId is required" });
-    }
+    const userId = req.authUser._id;
     const notifications = await Notification.find({ recipient: userId })
       .sort({ timestamp: -1 })
       .limit(50)
@@ -437,12 +476,9 @@ app.get("/notifications", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-app.get("/notifications/unread-count", async (req, res) => {
+app.get("/notifications/unread-count", verifyAuth, async (req, res) => {
   try {
-    const { userId } = req.query;
-    if (!userId) {
-      return res.status(400).send({ error: "userId is required" });
-    }
+    const userId = req.authUser._id;
     const count = await Notification.countDocuments({
       recipient: userId,
       read: false,
@@ -452,12 +488,9 @@ app.get("/notifications/unread-count", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-app.post("/notifications/read", async (req, res) => {
+app.post("/notifications/read", verifyAuth, async (req, res) => {
   try {
-    const { userId } = req.body;
-    if (!userId) {
-      return res.status(400).send({ error: "userId is required" });
-    }
+    const userId = req.authUser._id;
     await Notification.updateMany(
       { recipient: userId, read: false },
       { $set: { read: true } }
@@ -468,12 +501,9 @@ app.post("/notifications/read", async (req, res) => {
   }
 });
 // CONVERSATIONS / MESSAGES
-app.get("/conversations", async (req, res) => {
+app.get("/conversations", verifyAuth, async (req, res) => {
   try {
-    const { userId } = req.query;
-    if (!userId) {
-      return res.status(400).send({ error: "userId is required" });
-    }
+    const userId = req.authUser._id;
     const conversations = await Conversation.find({ participants: userId })
       .sort({ updatedAt: -1 })
       .populate("participants", "displayName username avatar");
@@ -482,10 +512,11 @@ app.get("/conversations", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-app.get("/conversation", async (req, res) => {
+app.get("/conversation", verifyAuth, async (req, res) => {
   try {
-    const { userId, otherId } = req.query;
-    if (!userId || !otherId) {
+    const userId = req.authUser._id;
+    const { otherId } = req.query;
+    if (!otherId) {
       return res.status(400).send({ error: "userId and otherId are required" });
     }
     const conversation = await Conversation.findOne({
@@ -496,10 +527,11 @@ app.get("/conversation", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-app.post("/conversation", async (req, res) => {
+app.post("/conversation", verifyAuth, async (req, res) => {
   try {
-    const { userId, otherId } = req.body;
-    if (!userId || !otherId) {
+    const userId = req.authUser._id;
+    const { otherId } = req.body;
+    if (!otherId) {
       return res.status(400).send({ error: "userId and otherId are required" });
     }
     let conversation = await Conversation.findOne({
@@ -517,10 +549,11 @@ app.post("/conversation", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-app.post("/message", async (req, res) => {
+app.post("/message", verifyAuth, async (req, res) => {
   try {
-    const { userId, otherId, content } = req.body;
-    if (!userId || !otherId) {
+    const userId = req.authUser._id;
+    const { otherId, content } = req.body;
+    if (!otherId) {
       return res.status(400).send({ error: "userId and otherId are required" });
     }
     if (!content || !content.trim()) {
@@ -535,6 +568,10 @@ app.post("/message", async (req, res) => {
       participants: { $all: [userId, otherId] },
     });
     if (!conversation) {
+      const other = await User.findById(otherId);
+      if (!other) {
+        return res.status(404).send({ error: "User not found" });
+      }
       conversation = new Conversation({
         participants: [userId, otherId],
         messages: [],
@@ -548,16 +585,17 @@ app.post("/message", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-app.post("/conversations/read", async (req, res) => {
+app.post("/conversations/read", verifyAuth, async (req, res) => {
   try {
-    const { userId, conversationId } = req.body;
-    if (!userId || !conversationId) {
+    const userId = req.authUser._id;
+    const { conversationId } = req.body;
+    if (!conversationId) {
       return res
         .status(400)
         .send({ error: "userId and conversationId are required" });
     }
     await Conversation.updateOne(
-      { _id: conversationId },
+      { _id: conversationId, participants: userId },
       { $set: { "messages.$[m].read": true } },
       { arrayFilters: [{ "m.sender": { $ne: userId }, "m.read": false }] }
     );

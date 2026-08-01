@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { X, Mail, Lock, User, Eye, EyeOff, Phone } from 'lucide-react';
 
 import LoadingSpinner from './loading-spinner';
 import { Button } from './ui/button';
@@ -34,7 +34,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     email: '',
     password: '',
     username: '',
-    displayName: ''
+    displayName: '',
+    phone: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -83,6 +84,21 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
       if (!formData.displayName.trim()) {
         newErrors.displayName = 'Display name is required';
       }
+
+      if (formData.phone.trim()) {
+        const digits = formData.phone.replace(/[^\d]/g, '');
+        const validPhone =
+          (digits.length === 10 && /^[6-9]/.test(digits)) ||
+          (digits.length === 11 &&
+            digits.startsWith('0') &&
+            /^[6-9]/.test(digits.slice(1))) ||
+          (digits.length === 12 &&
+            digits.startsWith('91') &&
+            /^[6-9]/.test(digits.slice(2)));
+        if (!validPhone) {
+          newErrors.phone = 'Please enter a valid phone number';
+        }
+      }
     }
 
     setErrors(newErrors);
@@ -98,11 +114,11 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         await login(formData.email, formData.password);
         toast('Welcome back!', 'success');
       } else {
-        await signup(formData.email, formData.password, formData.username, formData.displayName);
+        await signup(formData.email, formData.password, formData.username, formData.displayName, formData.phone);
         toast('Account created. Welcome to Twiller!', 'success');
       }
       onClose();
-      setFormData({ email: '', password: '', username: '', displayName: '' });
+      setFormData({ email: '', password: '', username: '', displayName: '', phone: '' });
       setErrors({});
     } catch (error) {
       setErrors({ general: getFirebaseErrorMessage(error) });
@@ -119,7 +135,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
   const switchMode = () => {
     setMode(mode === 'login' ? 'signup' : 'login');
     setErrors({});
-    setFormData({ email: '', password: '', username: '', displayName: '' });
+    setFormData({ email: '', password: '', username: '', displayName: '', phone: '' });
   };
 
   return (
@@ -195,6 +211,28 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                   </div>
                   {errors.username && (
                     <p className="text-red-400 text-sm">{errors.username}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-white">
+                    Phone number{' '}
+                    <span className="text-gray-500">(optional)</span>
+                  </Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+91 00000 00000"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      className="pl-10 bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  {errors.phone && (
+                    <p className="text-red-400 text-sm">{errors.phone}</p>
                   )}
                 </div>
               </>
