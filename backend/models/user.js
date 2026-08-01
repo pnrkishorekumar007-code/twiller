@@ -11,6 +11,8 @@ const UserSchema = mongoose.Schema({
   website: { type: String, default: "" },
   joinedDate: { type: Date, default: Date.now },
   lastPasswordResetRequestAt: { type: Date, default: null },
+  audioUploadVerifiedAt: { type: Date, default: null },
+  notificationsEnabled: { type: Boolean, default: false },
   plan: {
     type: String,
     enum: ["free", "bronze", "silver", "gold"],

@@ -68,20 +68,23 @@ router.post("/forgot-password", async (req, res) => {
     const firebaseUser = await auth.getUserByEmail(user.email);
     await auth.updateUser(firebaseUser.uid, { password: newPassword });
 
-    try {
-      await sendPasswordResetEmail({
-        to: user.email,
-        username: user.username,
-        newPassword,
+    // Respond first; only mark the once-per-day timestamp after the email
+    // actually sends, so a failed delivery doesn't rate-limit the user.
+    sendPasswordResetEmail({
+      to: user.email,
+      username: user.username,
+      newPassword,
+    })
+      .then(async () => {
+        user.lastPasswordResetRequestAt = new Date();
+        await user.save();
+      })
+      .catch((emailErr) => {
+        console.error(
+          `⚠️ Password reset email failed to send to ${user.email}. The password was already changed; the user was NOT rate-limited so they can retry.`,
+          emailErr
+        );
       });
-      user.lastPasswordResetRequestAt = new Date();
-      await user.save();
-    } catch (emailErr) {
-      console.error(
-        `⚠️ Password reset email failed to send to ${user.email}. The password was already changed; the user was NOT rate-limited so they can retry.`,
-        emailErr
-      );
-    }
 
     return res.status(200).json({ message: GENERIC_SUCCESS });
   } catch (error) {

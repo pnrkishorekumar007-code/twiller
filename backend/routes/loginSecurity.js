@@ -59,23 +59,19 @@ router.post("/login-session", verifyAuth, async (req, res) => {
         `[login-session] otp stored at +${Date.now() - t0}ms`
       );
 
-      try {
-        await sendLoginOtpEmail({
-          to: user.email,
-          username: user.username,
-          otp,
-        });
-        console.log(
-          `[login-session] otp email sent at +${Date.now() - t0}ms`
+      // Respond first, send the OTP email in the background so a slow/misconfigured
+      // SMTP connection can't hang the login request (and push the client past its
+      // 45-second ceiling). If delivery fails, it's logged — the OTP is already saved.
+      sendLoginOtpEmail({
+        to: user.email,
+        username: user.username,
+        otp,
+      }).catch((emailErr) => {
+        console.error(
+          `[login-session] Failed to send OTP email to ${user.email}:`,
+          emailErr.message
         );
-      } catch (emailErr) {
-        console.error("Login OTP email failed to send:", emailErr);
-        await LoginOtp.deleteOne({ user: user._id });
-        return res.status(500).json({
-          error:
-            "Could not send your login verification email. Please try again.",
-        });
-      }
+      });
 
       return res.status(200).json({ otpRequired: true });
     }

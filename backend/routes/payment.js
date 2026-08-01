@@ -143,22 +143,22 @@ router.post("/verify", verifyAuth, async (req, res) => {
     user.planRenewedAt = new Date();
     await user.save();
 
-    try {
-      await sendInvoiceEmail({
-        to: user.email,
-        username: user.username,
-        plan: subscription.plan,
-        amount: subscription.amount,
-        paymentId: razorpay_payment_id,
-        date: new Date().toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        }),
-      });
-    } catch (emailErr) {
+    // Payment is complete; send the invoice in the background so a slow SMTP
+    // connection can't delay the verification response.
+    sendInvoiceEmail({
+      to: user.email,
+      username: user.username,
+      plan: subscription.plan,
+      amount: subscription.amount,
+      paymentId: razorpay_payment_id,
+      date: new Date().toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
+    }).catch((emailErr) => {
       console.error("Invoice email failed:", emailErr);
-    }
+    });
 
     return res.status(200).json(user);
   } catch (error) {

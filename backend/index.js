@@ -10,6 +10,7 @@ import Comment from "./models/comment.js";
 import paymentRouter from "./routes/payment.js";
 import passwordResetRouter from "./routes/passwordReset.js";
 import loginSecurityRouter from "./routes/loginSecurity.js";
+import audioTweetRouter from "./routes/audioTweet.js";
 import { verifyAuth } from "./middleware/verifyAuth.js";
 import getFirebaseAdmin from "./utils/firebaseAdmin.js";
 import { getAuth } from "firebase-admin/auth";
@@ -294,10 +295,20 @@ app.patch("/userdata/:email", verifyAuth, async (req, res) => {
     if (String(req.authUser.email).toLowerCase() !== String(email).toLowerCase()) {
       return res.status(403).send({ error: "You can only edit your own profile" });
     }
-    const { displayName, bio, location, website, avatar } = req.body;
+    const { displayName, bio, location, website, avatar, notificationsEnabled } =
+      req.body;
     const updated = await User.findByIdAndUpdate(
       req.authUser._id,
-      { $set: { displayName, bio, location, website, avatar } },
+      {
+        $set: {
+          displayName,
+          bio,
+          location,
+          website,
+          avatar,
+          notificationsEnabled,
+        },
+      },
       { new: true, upsert: false }
     );
     return res.status(200).send(updated);
@@ -310,6 +321,8 @@ app.use("/payment", paymentRouter);
 // Auth API
 app.use("/auth", passwordResetRouter);
 app.use("/auth", loginSecurityRouter);
+// Audio Tweet API
+app.use("/audio", audioTweetRouter);
 
 // Tweet API
 
