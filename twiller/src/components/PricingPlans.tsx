@@ -115,7 +115,6 @@ const PricingPlans = () => {
     setError(null);
     try {
       const res = await axiosInstance.post("/payment/create-order", {
-        userId: user._id,
         plan: plan.id,
       });
       const { orderId, amount, currency, keyId } = res.data;
@@ -133,8 +132,6 @@ const PricingPlans = () => {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              userId: user._id,
-              plan: plan.id,
             });
             const updatedUser = verifyRes.data;
             setUser(updatedUser);

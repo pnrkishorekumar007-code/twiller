@@ -7,6 +7,7 @@ import timezone from "dayjs/plugin/timezone.js";
 import User from "../models/user.js";
 import Subscription from "../models/subscription.js";
 import { sendInvoiceEmail } from "../utils/mailer.js";
+import { verifyAuth } from "../middleware/verifyAuth.js";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -26,7 +27,8 @@ const razorpay = new Razorpay({
 
 function isPaymentWindowOpen() {
   const nowIST = dayjs().tz("Asia/Kolkata");
-  return nowIST.hour() === 10;
+  const hour = nowIST.hour();
+  return hour >= 10 && hour < 11;
 }
 
 function verifySignature({ orderId, paymentId, signature }) {
@@ -37,14 +39,12 @@ function verifySignature({ orderId, paymentId, signature }) {
   return expectedSignature === signature;
 }
 
-router.post("/create-order", async (req, res) => {
+router.post("/create-order", verifyAuth, async (req, res) => {
   try {
-    const { userId, plan } = req.body;
+    const { plan } = req.body;
 
-    if (!userId || !plan) {
-      return res
-        .status(400)
-        .json({ error: "userId and plan are required" });
+    if (!plan) {
+      return res.status(400).json({ error: "plan is required" });
     }
 
     if (!PLAN_AMOUNTS[plan]) {
@@ -60,13 +60,10 @@ router.post("/create-order", async (req, res) => {
       });
     }
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    const user = req.authUser;
 
     const amount = PLAN_AMOUNTS[plan];
-    const receipt = `receipt_${userId}_${Date.now()}`;
+    const receipt = `receipt_${user._id}_${Date.now()}`;
 
     const order = await razorpay.orders.create({
       amount,
@@ -94,18 +91,30 @@ router.post("/create-order", async (req, res) => {
   }
 });
 
-router.post("/verify", async (req, res) => {
+router.post("/verify", verifyAuth, async (req, res) => {
   try {
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-      userId,
-      plan,
-    } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+      req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({ error: "Missing payment verification data" });
+    }
+
+    const subscription = await Subscription.findOne({
+      razorpayOrderId: razorpay_order_id,
+    });
+    if (!subscription) {
+      return res.status(400).json({ error: "Payment order not found" });
+    }
+    if (String(subscription.userId) !== String(req.authUser._id)) {
+      return res
+        .status(403)
+        .json({ error: "This payment order does not belong to you" });
+    }
+
+    if (subscription.status === "paid") {
+      const user = await User.findById(subscription.userId);
+      return res.status(200).json(user);
     }
 
     const signatureValid = verifySignature({
@@ -115,28 +124,21 @@ router.post("/verify", async (req, res) => {
     });
 
     if (!signatureValid) {
-      await Subscription.findOneAndUpdate(
-        { razorpayOrderId: razorpay_order_id },
-        { status: "failed" }
-      );
+      subscription.status = "failed";
+      await subscription.save();
       return res.status(400).json({ error: "Payment signature verification failed" });
     }
 
-    const user = await User.findById(userId);
+    const user = await User.findById(subscription.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    await Subscription.findOneAndUpdate(
-      { razorpayOrderId: razorpay_order_id },
-      {
-        status: "paid",
-        razorpayPaymentId: razorpay_payment_id,
-        plan,
-      }
-    );
+    subscription.status = "paid";
+    subscription.razorpayPaymentId = razorpay_payment_id;
+    await subscription.save();
 
-    user.plan = plan;
+    user.plan = subscription.plan;
     user.tweetCount = 0;
     user.planRenewedAt = new Date();
     await user.save();
@@ -145,8 +147,8 @@ router.post("/verify", async (req, res) => {
       await sendInvoiceEmail({
         to: user.email,
         username: user.username,
-        plan,
-        amount: PLAN_AMOUNTS[plan],
+        plan: subscription.plan,
+        amount: subscription.amount,
         paymentId: razorpay_payment_id,
         date: new Date().toLocaleDateString("en-IN", {
           day: "2-digit",
