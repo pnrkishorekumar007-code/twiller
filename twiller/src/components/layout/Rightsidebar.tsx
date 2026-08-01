@@ -31,30 +31,6 @@ interface SuggestedUser {
   followedBy?: string[];
 }
 
-const FALLBACK_SUGGESTIONS: SuggestedUser[] = [
-  {
-    _id: "1",
-    username: "narendramodi",
-    displayName: "Narendra Modi",
-    avatar: "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=400",
-    verified: true,
-  },
-  {
-    _id: "2",
-    username: "akshaykumar",
-    displayName: "Akshay Kumar",
-    avatar: "https://images.pexels.com/photos/1382735/pexels-photo-1382735.jpeg?auto=compress&cs=tinysrgb&w=400",
-    verified: true,
-  },
-  {
-    _id: "3",
-    username: "rashtrapatibhvn",
-    displayName: "President of India",
-    avatar: "https://images.pexels.com/photos/1080213/pexels-photo-1080213.jpeg?auto=compress&cs=tinysrgb&w=400",
-    verified: true,
-  },
-];
-
 export default function RightSidebar() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -92,7 +68,7 @@ export default function RightSidebar() {
         });
         if (cancelled) return;
         const users = Array.isArray(res.data) ? res.data : [];
-        setSuggestions(users.length > 0 ? users : FALLBACK_SUGGESTIONS);
+        setSuggestions(users);
         setFollowing(
           new Set(
             users
@@ -103,7 +79,7 @@ export default function RightSidebar() {
           )
         );
       } catch {
-        if (!cancelled) setSuggestions(FALLBACK_SUGGESTIONS);
+        if (!cancelled) setSuggestions([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -350,11 +326,14 @@ export default function RightSidebar() {
               ))}
             </div>
           ) : (
-            <div className="space-y-4">{suggestions.map(renderUser)}</div>
+            suggestions.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-500">
+                No suggestions right now.
+              </p>
+            ) : (
+              <div className="space-y-4">{suggestions.map(renderUser)}</div>
+            )
           )}
-          <button className="mt-4 p-0 text-blue-400 transition-colors hover:text-blue-300">
-            Show more
-          </button>
         </CardContent>
       </Card>
 

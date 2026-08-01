@@ -31,7 +31,8 @@ const TweetComposer = ({
   const [isUploading, setIsUploading] = useState(false);
   const maxLength = 200;
 
-  const planLimit = user?.plan ? (PLAN_LIMITS[user.plan] ?? 1) : 1;
+  const planLimit =
+    user?.plan && user.plan in PLAN_LIMITS ? PLAN_LIMITS[user.plan] : 1;
   const tweetsUsed = user?.tweetCount ?? 0;
   const remaining =
     planLimit === null ? Infinity : Math.max(0, planLimit - tweetsUsed);

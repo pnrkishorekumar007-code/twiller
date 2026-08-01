@@ -16,13 +16,11 @@ const router = express.Router();
 
 const GENERIC_SUCCESS = "If an account exists, a new password has been sent.";
 
+import { escapeRegex } from "../utils/escapeRegex.js";
+
 function sameISTDay(a, b) {
   return dayjs(a).tz("Asia/Kolkata").format("YYYY-MM-DD") ===
     dayjs(b).tz("Asia/Kolkata").format("YYYY-MM-DD");
-}
-
-function escapeRegex(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 router.post("/forgot-password", async (req, res) => {

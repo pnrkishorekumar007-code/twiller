@@ -14,6 +14,7 @@ import { verifyAuth } from "./middleware/verifyAuth.js";
 import getFirebaseAdmin from "./utils/firebaseAdmin.js";
 import { getAuth } from "firebase-admin/auth";
 import { normalizePhone } from "./utils/phone.js";
+import { escapeRegex } from "./utils/escapeRegex.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -192,8 +193,8 @@ app.get("/users/search", async (req, res) => {
     }
     const users = await User.find({
       $or: [
-        { username: { $regex: q, $options: "i" } },
-        { displayName: { $regex: q, $options: "i" } },
+        { username: { $regex: escapeRegex(q), $options: "i" } },
+        { displayName: { $regex: escapeRegex(q), $options: "i" } },
       ],
     })
       .select("username displayName avatar bio plan following followedBy")
@@ -280,7 +281,7 @@ app.get("/bookmarks", verifyAuth, async (req, res) => {
     const bookmarks = user?.bookmarks || [];
     const tweets = await Tweet.find({ _id: { $in: bookmarks } })
       .sort({ timestamp: -1 })
-      .populate("author");
+      .populate("author", "displayName username avatar bio verified");
     return res.status(200).send(tweets);
   } catch (error) {
     return res.status(400).send({ error: error.message });
@@ -370,10 +371,10 @@ app.get("/post", async (req, res) => {
     if (q && q.toString().trim()) {
       query = {
         ...query,
-        content: { $regex: q.toString().trim(), $options: "i" },
+        content: { $regex: escapeRegex(q.toString().trim()), $options: "i" },
       };
     }
-    const tweet = await Tweet.find(query).sort({ timestamp: -1 }).limit(50).populate("author");
+    const tweet = await Tweet.find(query).sort({ timestamp: -1 }).limit(50).populate("author", "displayName username avatar bio verified");
     return res.status(200).send(tweet);
   } catch (error) {
     return res.status(400).send({ error: error.message });
@@ -384,7 +385,7 @@ app.get("/post/user/:userId", async (req, res) => {
   try {
     const tweet = await Tweet.find({ author: req.params.userId })
       .sort({ timestamp: -1 })
-      .populate("author");
+      .populate("author", "displayName username avatar bio verified");
     return res.status(200).send(tweet);
   } catch (error) {
     return res.status(400).send({ error: error.message });

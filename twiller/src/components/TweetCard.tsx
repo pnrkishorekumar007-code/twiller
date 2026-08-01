@@ -2,14 +2,12 @@
 
 import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import {
   Heart,
   MessageCircle,
   Repeat2,
   Share,
-  MoreHorizontal,
   Bookmark,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -59,8 +57,8 @@ export default function TweetCard({
         userId: user?._id,
       });
       settweetstate(res.data);
-    } catch (error) {
-      console.log(error);
+    } catch {
+      // ignore
     }
   };
 
@@ -70,8 +68,8 @@ export default function TweetCard({
         userId: user?._id,
       });
       settweetstate(res.data);
-    } catch (error) {
-      console.log(error);
+    } catch {
+      // ignore
     }
   };
   const toggleBookmark = async (tweetId: string) => {
@@ -84,8 +82,7 @@ export default function TweetCard({
       const isBookmarked = res.data.bookmarked;
       setBookmarked(isBookmarked);
       onBookmarkChange?.(tweetId, isBookmarked);
-    } catch (error) {
-      console.log(error);
+    } catch {
       setBookmarked((prev) => !prev);
     }
   };
@@ -166,15 +163,6 @@ export default function TweetCard({
                     year: "numeric",
                   })}
               </span>
-              <div className="ml-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="p-1 rounded-full hover:bg-gray-900"
-                >
-                  <MoreHorizontal className="h-5 w-5 text-gray-500" />
-                </Button>
-              </div>
             </div>
 
             <div className="text-white mb-3 leading-relaxed">

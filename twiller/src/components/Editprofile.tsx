@@ -68,7 +68,6 @@ function uploadImage(
           (snapshot.bytesTransferred / snapshot.totalBytes) * 100
         );
         onProgress(progress);
-        console.log("Upload Progress", progress);
       },
       (err) => {
         if (settled) return;
@@ -83,8 +82,6 @@ function uploadImage(
         clearTimeout(timer);
         try {
           const url = await getDownloadURL(task.snapshot.ref);
-          console.log("Upload Complete");
-          console.log("Download URL", url);
           resolve(url);
         } catch (err) {
           reject(err);
@@ -212,12 +209,10 @@ const Editprofile = ({
     setUploadProgress(0);
     setError({});
 
-    console.log("Save Started");
     let resolvedAvatar = originalAvatar;
 
     try {
       if (selectedFile) {
-        console.log("Upload Started");
         const compressed = await compressImage(selectedFile, MAX_DIM);
         const timestamp = Date.now();
         const storageRef = ref(
@@ -241,7 +236,6 @@ const Editprofile = ({
 
       const uid = auth.currentUser?.uid;
       if (uid) {
-        console.log("Firestore Update Started");
         await setDoc(
           doc(db, "users", uid),
           {
@@ -255,15 +249,12 @@ const Editprofile = ({
           },
           { merge: true }
         );
-        console.log("Firestore Update Complete");
       } else {
         console.warn("No Firebase uid found; skipping Firestore update");
       }
 
-      console.log("Backend Sync Started");
       try {
         await axiosInstance.patch(`/userdata/${user.email}`, updatedData);
-        console.log("Backend Sync Completed");
       } catch (syncErr: unknown) {
         console.warn("Backend sync failed (Firestore still updated):", syncErr);
       }
@@ -273,7 +264,6 @@ const Editprofile = ({
       localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
 
       toast("Profile updated", "success");
-      console.log("Profile Save Success");
       onclose();
     } catch (err: unknown) {
       console.error("Profile Update Failed:", err);

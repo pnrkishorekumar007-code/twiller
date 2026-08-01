@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Calendar,
@@ -15,6 +14,7 @@ import {
   Tablet,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useNav } from "@/context/NavContext";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -38,7 +38,7 @@ interface LoginHistoryEntry {
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const router = useRouter();
+  const { goBack } = useNav();
   const [activeTab, setActiveTab] = useState("posts");
   const [showEditModal, setShowEditModal] = useState(false);
   const [tweets, setTweets] = useState<Tweet[]>([]);
@@ -86,7 +86,7 @@ export default function ProfilePage() {
             variant="ghost"
             size="sm"
             className="rounded-full p-2 transition-colors hover:bg-gray-900"
-            onClick={() => router.back()}
+            onClick={goBack}
           >
             <ArrowLeft className="h-5 w-5 text-white" />
           </Button>
