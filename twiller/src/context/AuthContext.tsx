@@ -8,10 +8,18 @@ import {
   signInWithPopup,
   signOut,
 } from "firebase/auth";
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
 import { auth } from "./firebase";
 import axiosInstance from "../lib/axiosInstance";
 import { useToast } from "./ToastContext";
+
+const PENDING_OTP_KEY = "twiller-pending-login-otp";
 
 interface User {
   _id: string;
@@ -51,6 +59,9 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   googlesignin: () => void;
+  otpPending: boolean;
+  verifyLoginOtp: (otp: string) => Promise<void>;
+  cancelLoginOtp: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,12 +79,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [otpPending, setOtpPending] = useState(false);
+  const loginFlowRef = useRef(false);
   const { toast } = useToast();
+
+  const gateLogin = async (): Promise<
+    "blocked" | "otpRequired" | "success"
+  > => {
+    try {
+      const res = await axiosInstance.post("/auth/login-session");
+      if (res.data?.otpRequired) return "otpRequired";
+      return "success";
+    } catch (err) {
+      const data = (err as {
+        response?: { data?: { blocked?: boolean; reason?: string } };
+      })?.response?.data;
+      if (data?.blocked && data?.reason === "mobile_time_window") {
+        return "blocked";
+      }
+      throw err;
+    }
+  };
+
+  const fetchUserData = async (email: string) => {
+    const res = await axiosInstance.get("/loggedinuser", {
+      params: { email },
+    });
+    return res.data;
+  };
 
   useEffect(() => {
     // Check for existing session
     const unsubcribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (loginFlowRef.current) {
+        setIsLoading(false);
+        return;
+      }
+
       if (firebaseUser?.email) {
+        // A login that still needs OTP verification must not restore the
+        // session on reload — otherwise refreshing would bypass the check.
+        if (sessionStorage.getItem(PENDING_OTP_KEY)) {
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
         try {
           const res = await axiosInstance.get("/loggedinuser", {
             params: { email: firebaseUser.email },
@@ -97,25 +147,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    // Mock authentication - in real app, this would call an API
-    const usercred = await signInWithEmailAndPassword(auth, email, password);
-    const firebaseuser = usercred.user;
-    const res = await axiosInstance.get("/loggedinuser", {
-      params: { email: firebaseuser.email },
-    });
-    if (res.data) {
-      setUser(res.data);
-      localStorage.setItem("twitter-user", JSON.stringify(res.data));
+    loginFlowRef.current = true;
+    try {
+      const usercred = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseuser = usercred.user;
+
+      const gate = await gateLogin();
+
+      if (gate === "blocked") {
+        await signOut(auth);
+        throw new Error(
+          "Login from mobile devices is only allowed between 10:00 AM and 1:00 PM."
+        );
+      }
+
+      if (gate === "otpRequired") {
+        setOtpPending(true);
+        sessionStorage.setItem(PENDING_OTP_KEY, "1");
+        return;
+      }
+
+      if (!firebaseuser.email) {
+        throw new Error("No email associated with this account");
+      }
+      const res = await fetchUserData(firebaseuser.email);
+      if (res) {
+        setUser(res);
+        localStorage.setItem("twitter-user", JSON.stringify(res));
+      }
+    } finally {
+      loginFlowRef.current = false;
+      setIsLoading(false);
     }
-    // const mockUser: User = {
-    //   id: '1',
-    //   username: 'johndoe',
-    //   displayName: 'John Doe',
-    //   avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400',
-    //   bio: 'Software developer passionate about building great products',
-    //   joinedDate: 'April 2024'
-    // };
-    setIsLoading(false);
   };
 
   const signup = async (
@@ -161,6 +224,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logout = async () => {
     setUser(null);
+    setOtpPending(false);
+    sessionStorage.removeItem(PENDING_OTP_KEY);
     await signOut(auth);
     localStorage.removeItem("twitter-user");
   };
@@ -197,6 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
   const googlesignin = async () => {
     setIsLoading(true);
+    loginFlowRef.current = true;
 
     try {
       const googleauthprovider = new GoogleAuthProvider();
@@ -226,6 +292,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         userData = registerRes.data;
       }
 
+      const gate = await gateLogin();
+
+      if (gate === "blocked") {
+        await signOut(auth);
+        throw new Error(
+          "Login from mobile devices is only allowed between 10:00 AM and 1:00 PM."
+        );
+      }
+
+      if (gate === "otpRequired") {
+        setOtpPending(true);
+        sessionStorage.setItem(PENDING_OTP_KEY, "1");
+        return;
+      }
+
       if (userData) {
         setUser(userData);
         localStorage.setItem("twitter-user", JSON.stringify(userData));
@@ -245,8 +326,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           : "Login failed. Please try again.");
       toast(msg, "error");
     } finally {
+      loginFlowRef.current = false;
       setIsLoading(false);
     }
+  };
+
+  const verifyLoginOtp = async (otp: string) => {
+    try {
+      await axiosInstance.post("/auth/verify-login-otp", { otp });
+
+      const firebaseuser = auth.currentUser;
+      if (!firebaseuser?.email) {
+        throw new Error("Session lost. Please log in again.");
+      }
+
+      const res = await fetchUserData(firebaseuser.email);
+      setOtpPending(false);
+      sessionStorage.removeItem(PENDING_OTP_KEY);
+      if (res) {
+        setUser(res);
+        localStorage.setItem("twitter-user", JSON.stringify(res));
+      }
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status;
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || "";
+      if (status === 429 || /expired|too many/i.test(msg)) {
+        setOtpPending(false);
+        sessionStorage.removeItem(PENDING_OTP_KEY);
+        await signOut(auth);
+      }
+      throw err;
+    }
+  };
+
+  const cancelLoginOtp = async () => {
+    setOtpPending(false);
+    sessionStorage.removeItem(PENDING_OTP_KEY);
+    await signOut(auth);
   };
 
   return (
@@ -260,6 +379,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         logout,
         isLoading,
         googlesignin,
+        otpPending,
+        verifyLoginOtp,
+        cancelLoginOtp,
       }}
     >
       {children}

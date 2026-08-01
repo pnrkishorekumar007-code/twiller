@@ -9,12 +9,14 @@ import Conversation from "./models/conversation.js";
 import Comment from "./models/comment.js";
 import paymentRouter from "./routes/payment.js";
 import passwordResetRouter from "./routes/passwordReset.js";
+import loginSecurityRouter from "./routes/loginSecurity.js";
 import { verifyAuth } from "./middleware/verifyAuth.js";
 import getFirebaseAdmin from "./utils/firebaseAdmin.js";
 import { getAuth } from "firebase-admin/auth";
 import { normalizePhone } from "./utils/phone.js";
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
 
@@ -306,6 +308,7 @@ app.patch("/userdata/:email", verifyAuth, async (req, res) => {
 app.use("/payment", paymentRouter);
 // Auth API
 app.use("/auth", passwordResetRouter);
+app.use("/auth", loginSecurityRouter);
 
 // Tweet API
 

@@ -70,6 +70,36 @@ export async function sendInvoiceEmail({
   await transporter.sendMail(mailOptions);
 }
 
+export async function sendLoginOtpEmail({ to, username, otp }) {
+  const mailOptions = {
+    from: `"Twiller" <${process.env.SMTP_USER}>`,
+    to,
+    subject: "Twiller Login Verification Code",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+        <div style="background: #0f172a; color: #fff; padding: 24px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px;">Twiller</h1>
+          <p style="margin: 4px 0 0; color: #94a3b8;">Login Verification</p>
+        </div>
+        <div style="padding: 24px;">
+          <p>Hi <strong>@${username}</strong>,</p>
+          <p>Use the code below to finish signing in to Twiller:</p>
+          <div style="margin: 24px 0; padding: 16px; background: #f1f5f9; border-radius: 8px; text-align: center;">
+            <code style="font-size: 24px; font-weight: bold; color: #0f172a; letter-spacing: 4px;">${otp}</code>
+          </div>
+          <p>This code expires in <strong>10 minutes</strong>. If you didn't try to sign in, you can safely ignore this email.</p>
+          <p style="color: #6b7280; font-size: 13px;">For security, we require this extra step for some logins.</p>
+        </div>
+        <div style="background: #f8fafc; padding: 16px; text-align: center; color: #94a3b8; font-size: 12px;">
+          &copy; ${new Date().getFullYear()} Twiller. All rights reserved.
+        </div>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
 export async function sendPasswordResetEmail({ to, username, newPassword }) {
   const mailOptions = {
     from: `"Twiller" <${process.env.SMTP_USER}>`,

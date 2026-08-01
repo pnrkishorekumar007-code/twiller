@@ -10,6 +10,9 @@ import {
   MoreHorizontal,
   Camera,
   Crown,
+  Monitor,
+  Smartphone,
+  Tablet,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "./ui/button";
@@ -20,6 +23,18 @@ import { Card, CardContent } from "./ui/card";
 import Editprofile from "./Editprofile";
 import axiosInstance from "@/lib/axiosInstance";
 import { PLAN_LABELS } from "@/lib/plans";
+import { timeAgo } from "@/lib/time";
+
+interface LoginHistoryEntry {
+  _id: string;
+  browser: string;
+  browserVersion: string;
+  os: string;
+  device: "desktop" | "mobile" | "tablet";
+  ip: string;
+  otpVerified: boolean;
+  timestamp: string;
+}
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -28,6 +43,7 @@ export default function ProfilePage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [tweets, setTweets] = useState<Tweet[]>([]);
   const [loading, setloading] = useState(false);
+  const [loginHistory, setLoginHistory] = useState<LoginHistoryEntry[]>([]);
 
   const fetchTweets = async () => {
     if (!user) return;
@@ -41,9 +57,18 @@ export default function ProfilePage() {
       setloading(false);
     }
   };
+  const fetchLoginHistory = async () => {
+    try {
+      const res = await axiosInstance.get("/auth/login-history");
+      setLoginHistory(res.data);
+    } catch (error) {
+      console.error("Failed to fetch login history:", error);
+    }
+  };
   useEffect(() => {
     if (user) {
       fetchTweets();
+      fetchLoginHistory();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?._id]);
@@ -189,6 +214,52 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Login History */}
+      {loginHistory.length > 0 && (
+        <div className="px-4 pb-6">
+          <h2 className="mb-2 text-lg font-bold text-white">Login History</h2>
+          <Card className="bg-black border-gray-800">
+            <CardContent className="p-0 divide-y divide-gray-800">
+              {loginHistory.map((entry) => (
+                <div
+                  key={entry._id}
+                  className="flex items-center justify-between px-4 py-3"
+                >
+                  <div className="flex items-center space-x-3">
+                    {entry.device === "mobile" ? (
+                      <Smartphone className="h-5 w-5 text-gray-400 shrink-0" />
+                    ) : entry.device === "tablet" ? (
+                      <Tablet className="h-5 w-5 text-gray-400 shrink-0" />
+                    ) : (
+                      <Monitor className="h-5 w-5 text-gray-400 shrink-0" />
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        {entry.browser}
+                        {entry.browserVersion
+                          ? ` ${entry.browserVersion}`
+                          : ""}
+                        <span className="text-gray-500"> · </span>
+                        {entry.os}
+                      </p>
+                      <p className="text-xs text-gray-400">{entry.ip}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400">
+                      {timeAgo(entry.timestamp)}
+                    </p>
+                    {entry.otpVerified && (
+                      <p className="text-xs text-green-400">OTP verified</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

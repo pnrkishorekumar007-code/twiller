@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dayjs": "^1.11.21",
     "dotenv": "^17.4.2",
@@ -20,7 +21,8 @@
     "mongoose": "^8.24.2",
     "nodemailer": "^9.0.3",
     "nodemon": "^3.1.14",
-    "razorpay": "^2.9.8"
+    "razorpay": "^2.9.8",
+    "ua-parser-js": "^2.0.10"
   },
   "description": ""
 }

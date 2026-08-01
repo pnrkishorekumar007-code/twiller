@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "./ui/button";
 import AuthModal from "./Authmodel";
+import LoginOtpModal from "./LoginOtpModal";
 import TwitterLogo from "./Twitterlogo";
 import { useAuth } from "@/context/AuthContext";
 import Feed from "./Feed";
@@ -10,7 +11,7 @@ import Feed from "./Feed";
 export default function LandingPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
-  const { user, googlesignin } = useAuth();
+  const { user, googlesignin, otpPending } = useAuth();
 
   const openAuthModal = (mode: "login" | "signup") => {
     setAuthMode(mode);
@@ -137,6 +138,7 @@ export default function LandingPage() {
         onClose={() => setShowAuthModal(false)}
         initialMode={authMode}
       />
+      {otpPending && <LoginOtpModal />}
     </div>
   );
 }
