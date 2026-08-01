@@ -92,11 +92,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const gateLogin = async (): Promise<
     "blocked" | "otpRequired" | "success"
   > => {
+    const TIMEOUT_MS = 45000;
     try {
-      const res = await axiosInstance.post("/auth/login-session");
-      if (res.data?.otpRequired) return "otpRequired";
+      const res = await Promise.race([
+        axiosInstance.post("/auth/login-session"),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("LOGIN_SESSION_TIMEOUT")), TIMEOUT_MS)
+        ),
+      ]);
+      if ((res as { data?: { otpRequired?: boolean } }).data?.otpRequired)
+        return "otpRequired";
       return "success";
     } catch (err) {
+      if (err instanceof Error && err.message === "LOGIN_SESSION_TIMEOUT") {
+        throw new Error(
+          "The server is taking too long to respond. Please try again in a moment."
+        );
+      }
       const data = (err as {
         response?: { data?: { blocked?: boolean; reason?: string } };
       })?.response?.data;
