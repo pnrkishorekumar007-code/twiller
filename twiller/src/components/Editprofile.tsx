@@ -13,6 +13,7 @@ import LoadingSpinner from "./loading-spinner";
 import { ref, uploadBytesResumable, getDownloadURL, type UploadTask } from "firebase/storage";
 import axiosInstance from "@/lib/axiosInstance";
 import { useToast } from "@/context/ToastContext";
+import { useTranslation } from "react-i18next";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -36,13 +37,13 @@ function compressImage(file: File, maxDim: number): Promise<Blob> {
       canvas.toBlob(
         (blob) => {
           if (blob) resolve(blob);
-          else reject(new Error("Image compression failed"));
+          else reject(new Error("COMPRESSION_FAILED"));
         },
         file.type,
         0.85
       );
     };
-    img.onerror = () => reject(new Error("Failed to load image"));
+    img.onerror = () => reject(new Error("IMAGE_LOAD_FAILED"));
     img.src = URL.createObjectURL(file);
   });
 }
@@ -58,7 +59,7 @@ function uploadImage(
       if (settled) return;
       settled = true;
       task.cancel();
-      reject(new Error("Image upload timed out. Please try again."));
+      reject(new Error("UPLOAD_TIMEOUT"));
     }, timeoutMs);
 
     task.on(
@@ -74,7 +75,7 @@ function uploadImage(
         settled = true;
         clearTimeout(timer);
         console.error("Upload Error", err);
-        reject(new Error(`Upload failed: ${err.message}`));
+        reject(new Error("UPLOAD_FAILED"));
       },
       async () => {
         if (settled) return;
@@ -100,6 +101,7 @@ const Editprofile = ({
 }) => {
   const { user, setUser } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [formData, setFormdata] = useState({
@@ -149,18 +151,18 @@ const Editprofile = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.displayName.trim()) {
-      newErrors.displayName = "Display name is required";
+      newErrors.displayName = t("editProfile.nameRequired");
     } else if (formData.displayName.length > 50) {
-      newErrors.displayName = "Display name must be 50 characters or less";
+      newErrors.displayName = t("editProfile.nameTooLong");
     }
     if (formData.bio.length > 160) {
-      newErrors.bio = "Bio must be 160 characters or less";
+      newErrors.bio = t("editProfile.bioTooLong");
     }
     if (formData.website && formData.website.length > 100) {
-      newErrors.website = "Website must be 100 characters or less";
+      newErrors.website = t("editProfile.websiteTooLong");
     }
     if (formData.location && formData.location.length > 30) {
-      newErrors.location = "Location must be 30 characters or less";
+      newErrors.location = t("editProfile.locationTooLong");
     }
     setError(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -175,10 +177,10 @@ const Editprofile = ({
 
   const validateImage = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return "Only JPG, PNG, and WebP images are allowed.";
+      return t("editProfile.imageTypes");
     }
     if (file.size > MAX_SIZE) {
-      return "Image must be under 5MB.";
+      return t("editProfile.imageSize");
     }
     return null;
   };
@@ -263,15 +265,20 @@ const Editprofile = ({
       setUser(updatedUser);
       localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
 
-      toast("Profile updated", "success");
+      toast(t("editProfile.updated"), "success");
       onclose();
     } catch (err: unknown) {
       console.error("Profile Update Failed:", err);
+      const msg = err instanceof Error ? err.message : "";
+      const keyMap: Record<string, string> = {
+        COMPRESSION_FAILED: "editProfile.compressionFailed",
+        IMAGE_LOAD_FAILED: "editProfile.imageLoadFailed",
+        UPLOAD_TIMEOUT: "editProfile.uploadTimeout",
+        UPLOAD_FAILED: "editProfile.uploadFailed",
+      };
       setError({
         general:
-          err instanceof Error
-            ? err.message
-            : "Failed to update profile. Please try again.",
+          msg && keyMap[msg] ? t(keyMap[msg]) : t("editProfile.failed"),
       });
     } finally {
       setSaving(false);
@@ -301,7 +308,7 @@ const Editprofile = ({
               >
                 <X className="h-5 w-5" />
               </Button>
-              <CardTitle className="text-xl font-bold">Edit profile</CardTitle>
+              <CardTitle className="text-xl font-bold">{t("editProfile.title")}</CardTitle>
             </div>
             <Button
               type="submit"
@@ -313,11 +320,11 @@ const Editprofile = ({
                 <div className="flex items-center space-x-2">
                   <LoadingSpinner size="sm" />
                   <span>
-                    {uploadProgress > 0 ? `${uploadProgress}%` : "Saving..."}
+                    {uploadProgress > 0 ? `${uploadProgress}%` : t("editProfile.saving")}
                   </span>
                 </div>
               ) : (
-                "Save"
+                t("editProfile.save")
               )}
             </Button>
           </div>
@@ -395,7 +402,7 @@ const Editprofile = ({
             <div className="p-4 mt-16 space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="displayName" className="text-white">
-                  Name
+                  {t("editProfile.name")}
                 </Label>
                 <Input
                   id="displayName"
@@ -405,7 +412,7 @@ const Editprofile = ({
                     handleInputChange("displayName", e.target.value)
                   }
                   className="bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
-                  placeholder="Your display name"
+                  placeholder={t("editProfile.namePlaceholder")}
                   maxLength={50}
                   disabled={saving}
                 />
@@ -421,14 +428,14 @@ const Editprofile = ({
 
               <div className="space-y-2">
                 <Label htmlFor="bio" className="text-white">
-                  Bio
+                  {t("editProfile.bio")}
                 </Label>
                 <Textarea
                   id="bio"
                   value={formData.bio}
                   onChange={(e) => handleInputChange("bio", e.target.value)}
                   className="bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 resize-none min-h-[100px]"
-                  placeholder="Tell the world about yourself"
+                  placeholder={t("editProfile.bioPlaceholder")}
                   maxLength={160}
                   disabled={saving}
                 />
@@ -442,7 +449,7 @@ const Editprofile = ({
 
               <div className="space-y-2">
                 <Label htmlFor="location" className="text-white">
-                  Location
+                  {t("editProfile.location")}
                 </Label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -454,7 +461,7 @@ const Editprofile = ({
                       handleInputChange("location", e.target.value)
                     }
                     className="pl-10 bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
-                    placeholder="Where are you located?"
+                    placeholder={t("editProfile.locationPlaceholder")}
                     maxLength={30}
                     disabled={saving}
                   />
@@ -471,7 +478,7 @@ const Editprofile = ({
 
               <div className="space-y-2">
                 <Label htmlFor="website" className="text-white">
-                  Website
+                  {t("editProfile.website")}
                 </Label>
                 <div className="relative">
                   <LinkIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -483,7 +490,7 @@ const Editprofile = ({
                       handleInputChange("website", e.target.value)
                     }
                     className="pl-10 bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
-                    placeholder="Your website URL"
+                    placeholder={t("editProfile.websitePlaceholder")}
                     maxLength={100}
                     disabled={saving}
                   />

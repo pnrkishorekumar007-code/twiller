@@ -7,6 +7,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { timeAgo } from "@/lib/time";
+import { useTranslation } from "react-i18next";
 
 interface NotificationActor {
   _id: string;
@@ -33,6 +34,7 @@ interface NotificationItem {
 export default function NotificationsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,9 +70,9 @@ export default function NotificationsPage() {
   const markAllRead = async () => {
     try {
       await axiosInstance.post("/notifications/read", { userId: user?._id });
-      toast("All notifications marked as read", "success");
+      toast(t("notifications.markedRead"), "success");
     } catch {
-      toast("Failed to mark notifications as read", "error");
+      toast(t("notifications.markFailed"), "error");
     }
   };
 
@@ -110,14 +112,14 @@ export default function NotificationsPage() {
     <div className="min-h-screen">
       <div className="sticky top-0 z-10 border-b border-gray-800 bg-black/90 px-4 py-3 backdrop-blur-md">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-white">Notifications</h1>
+          <h1 className="text-xl font-bold text-white">{t("notifications.title")}</h1>
           {notifications.length > 0 && (
             <button
               onClick={markAllRead}
               className="flex items-center gap-1 rounded-full p-2 text-sm font-semibold text-blue-400 transition-colors hover:bg-blue-900/20"
             >
               <CheckCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">Mark all read</span>
+              <span className="hidden sm:inline">{t("notifications.markAllRead")}</span>
             </button>
           )}
         </div>
@@ -137,10 +139,10 @@ export default function NotificationsPage() {
             <Bell className="h-7 w-7 text-gray-500" />
           </div>
           <p className="mb-1 text-lg font-bold text-white">
-            Nothing to see here yet
+            {t("notifications.emptyTitle")}
           </p>
           <p className="max-w-xs text-sm text-gray-500">
-            Likes, retweets and follows on your tweets will show up here.
+            {t("notifications.emptyDesc")}
           </p>
         </div>
       ) : (
@@ -166,10 +168,10 @@ export default function NotificationsPage() {
                 <div className="text-sm text-gray-400">
                   @{n.actor.username}
                   {n.type === "follow"
-                    ? " followed you"
+                    ? t("notifications.followedYou")
                     : n.type === "like"
-                    ? " liked your tweet"
-                    : " retweeted your tweet"}
+                    ? t("notifications.likedYourTweet")
+                    : t("notifications.retweetedYourTweet")}
                 </div>
                 {n.tweet?.content && (
                   <p className="mt-1 truncate text-sm text-gray-500">

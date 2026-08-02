@@ -49,7 +49,10 @@ router.post("/forgot-password", async (req, res) => {
       if (sameISTDay(lastRequest, new Date())) {
         return res
           .status(429)
-          .json({ error: "You can use this option only one time per day." });
+          .json({
+            error: "You can use this option only one time per day.",
+            code: "rate_limit",
+          });
       }
     }
 

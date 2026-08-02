@@ -10,10 +10,12 @@ import { Input } from "./ui/input";
 import TwitterLogo from "./Twitterlogo";
 import axiosInstance from "@/lib/axiosInstance";
 import { useToast } from "@/context/ToastContext";
+import { useTranslation } from "react-i18next";
 
 export default function ForgotPassword() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [identifier, setIdentifier] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -28,10 +30,16 @@ export default function ForgotPassword() {
       setSubmitted(true);
       setIdentifier("");
     } catch (error: unknown) {
-      const msg = (
-        error as { response?: { data?: { error?: string } } }
-      )?.response?.data?.error;
-      toast(msg || "Something went wrong. Please try again.", "error");
+      const res = error as {
+        response?: { data?: { error?: string; code?: string }; status?: number };
+      };
+      const code = res?.response?.data?.code;
+      const msg = res?.response?.data?.error;
+      if (code === "rate_limit" || res?.response?.status === 429) {
+        toast(t("forgotPassword.rateLimit"), "error");
+      } else {
+        toast(msg || t("forgotPassword.error"), "error");
+      }
     } finally {
       setLoading(false);
     }
@@ -54,11 +62,10 @@ export default function ForgotPassword() {
               <TwitterLogo size="xl" className="text-white" />
             </div>
             <CardTitle className="text-2xl font-bold">
-              Find your account
+              {t("forgotPassword.title")}
             </CardTitle>
             <p className="mt-1 text-sm text-gray-400">
-              Enter your email or phone number and we&apos;ll send you a new
-              password.
+              {t("forgotPassword.desc")}
             </p>
           </div>
         </CardHeader>
@@ -70,26 +77,25 @@ export default function ForgotPassword() {
                 <KeyRound className="h-6 w-6" />
               </div>
               <p className="text-sm leading-relaxed text-gray-300">
-                If an account exists, a new password has been sent to the
-                registered email.
+                {t("forgotPassword.success")}
               </p>
               <Button
                 onClick={() => router.push("/")}
                 className="w-full rounded-full bg-blue-500 py-3 font-semibold text-white transition-all hover:bg-blue-600 active:scale-[0.98]"
               >
-                Back to home
+                {t("forgotPassword.backHome")}
               </Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="identifier" className="text-white">
-                  Email or phone number
+                  {t("forgotPassword.identifier")}
                 </Label>
                 <Input
                   id="identifier"
                   type="text"
-                  placeholder="you@example.com or +91 00000 00000"
+                  placeholder={t("forgotPassword.identifierPlaceholder")}
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   className="bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
@@ -105,21 +111,21 @@ export default function ForgotPassword() {
                 {loading ? (
                   <span className="flex items-center space-x-2">
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Sending...</span>
+                    <span>{t("forgotPassword.sending")}</span>
                   </span>
                 ) : (
-                  "Send password reset"
+                  t("forgotPassword.send")
                 )}
               </Button>
 
               <div className="text-center text-sm">
-                <span className="text-gray-400">Remembered your password?</span>{" "}
+                <span className="text-gray-400">{t("forgotPassword.remembered")}</span>{" "}
                 <button
                   type="button"
                   onClick={() => router.push("/")}
                   className="font-semibold text-blue-400 transition-colors hover:text-blue-300"
                 >
-                  Sign in
+                  {t("forgotPassword.signIn")}
                 </button>
               </div>
             </form>

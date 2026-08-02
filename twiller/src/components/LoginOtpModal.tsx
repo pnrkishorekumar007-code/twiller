@@ -9,9 +9,11 @@ import { Input } from "./ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { getFirebaseErrorMessage } from "@/lib/firebaseErrors";
 import TwitterLogo from "./Twitterlogo";
+import { useTranslation } from "react-i18next";
 
 export default function LoginOtpModal() {
   const { verifyLoginOtp, cancelLoginOtp } = useAuth();
+  const { t } = useTranslation();
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +32,7 @@ export default function LoginOtpModal() {
     if (submitting) return;
 
     if (!/^\d{6}$/.test(otp)) {
-      setError("Enter the 6-digit code from your email");
+      setError(t("loginOtp.enterCode"));
       return;
     }
 
@@ -39,7 +41,7 @@ export default function LoginOtpModal() {
     try {
       await verifyLoginOtp(otp);
     } catch (err) {
-      setError(getFirebaseErrorMessage(err));
+      setError(getFirebaseErrorMessage(err, t));
     } finally {
       setSubmitting(false);
     }
@@ -68,7 +70,7 @@ export default function LoginOtpModal() {
               <TwitterLogo size="xl" className="text-white" />
             </div>
             <CardTitle className="text-2xl font-bold">
-              Verify your login
+              {t("loginOtp.title")}
             </CardTitle>
           </div>
         </CardHeader>
@@ -76,10 +78,7 @@ export default function LoginOtpModal() {
         <CardContent className="space-y-6">
           <div className="flex items-start space-x-3 rounded-lg border border-blue-800 bg-blue-900/20 p-3 text-sm text-blue-300">
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-            <p>
-              For added security we emailed you a 6-digit code. Enter it below
-              to continue. The code expires in 10 minutes.
-            </p>
+            <p>{t("loginOtp.desc")}</p>
           </div>
 
           {error && (
@@ -93,7 +92,7 @@ export default function LoginOtpModal() {
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="000000"
+              placeholder={t("loginOtp.placeholder")}
               maxLength={6}
               value={otp}
               onChange={(e) => {
@@ -113,24 +112,24 @@ export default function LoginOtpModal() {
               {submitting ? (
                 <div className="flex items-center space-x-2">
                   <LoadingSpinner size="sm" />
-                  <span>Verifying...</span>
+                  <span>{t("loginOtp.verifying")}</span>
                 </div>
               ) : (
-                "Verify & continue"
+                t("loginOtp.verify")
               )}
             </Button>
           </form>
 
           <div className="text-center">
             <p className="text-sm text-gray-400">
-              Changed your mind?{" "}
+              {t("loginOtp.changedMind")}{" "}
               <Button
                 variant="link"
                 className="px-1 text-blue-400 hover:text-blue-300 font-semibold"
                 onClick={() => cancelLoginOtp()}
                 disabled={submitting}
               >
-                Cancel and sign out
+                {t("loginOtp.cancelSignOut")}
               </Button>
             </p>
           </div>

@@ -5,13 +5,6 @@ export const PLAN_LIMITS: Record<string, number | null> = {
   gold: null,
 };
 
-export const PLAN_LABELS: Record<string, string> = {
-  free: "Free",
-  bronze: "Bronze",
-  silver: "Silver",
-  gold: "Gold",
-};
-
 export const PLANS = [
   { id: "free", name: "Free", price: 0, limit: "1 tweet per month" },
   { id: "bronze", name: "Bronze", price: 100, limit: "3 tweets per month" },

@@ -13,7 +13,9 @@ import {
   Smartphone,
   Tablet,
   Bell,
+  Languages,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
 import { useNav } from "@/context/NavContext";
 import { useToast } from "@/context/ToastContext";
@@ -23,9 +25,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import TweetCard, { type Tweet } from "./TweetCard";
 import { Card, CardContent } from "./ui/card";
 import Editprofile from "./Editprofile";
+import LanguageOtpModal from "./LanguageOtpModal";
 import axiosInstance from "@/lib/axiosInstance";
-import { PLAN_LABELS } from "@/lib/plans";
 import { timeAgo } from "@/lib/time";
+import { SUPPORTED_LANGUAGES } from "@/i18n/config";
 
 interface LoginHistoryEntry {
   _id: string;
@@ -42,8 +45,11 @@ export default function ProfilePage() {
   const { user, setUser } = useAuth();
   const { goBack } = useNav();
   const { toast } = useToast();
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState("posts");
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [pendingLanguage, setPendingLanguage] = useState<string | null>(null);
   const [tweets, setTweets] = useState<Tweet[]>([]);
   const [loading, setloading] = useState(false);
   const [loginHistory, setLoginHistory] = useState<LoginHistoryEntry[]>([]);
@@ -73,15 +79,12 @@ export default function ProfilePage() {
     if (!user) return;
     if (enabled) {
       if (!("Notification" in window)) {
-        toast("Your browser doesn't support notifications.", "error");
+        toast(t("profile.notificationUnsupported"), "error");
         return;
       }
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        toast(
-          "Notifications were blocked. Enable them in your browser settings to use this feature.",
-          "error"
-        );
+        toast(t("profile.notificationBlocked"), "error");
         return;
       }
     }
@@ -92,11 +95,27 @@ export default function ProfilePage() {
       const updatedUser = { ...user, notificationsEnabled: enabled };
       setUser(updatedUser);
       localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
-      toast(enabled ? "Notifications enabled" : "Notifications disabled", "success");
+      toast(
+        enabled
+          ? t("profile.notificationEnabled")
+          : t("profile.notificationDisabled"),
+        "success"
+      );
     } catch (error) {
       console.error("Failed to update notification preference:", error);
-      toast("Failed to update notification preference. Try again.", "error");
+      toast(t("profile.notificationToggleFailed"), "error");
     }
+  };
+
+  const handleLanguageChange = (code: string) => {
+    if (!user) return;
+    if (code === i18n.language) return;
+    if (code !== "fr" && !user.phone) {
+      toast(t("language.noPhone"), "error");
+      return;
+    }
+    setPendingLanguage(code);
+    setShowLanguageModal(true);
   };
 
   useEffect(() => {
@@ -126,7 +145,9 @@ export default function ProfilePage() {
           </Button>
           <div>
             <h1 className="text-xl font-bold text-white">{user.displayName}</h1>
-            <p className="text-sm text-gray-400">{userTweets.length} posts</p>
+            <p className="text-sm text-gray-400">
+              {t("profile.posts", { count: userTweets.length })}
+            </p>
           </div>
         </div>
       </div>
@@ -140,7 +161,7 @@ export default function ProfilePage() {
             size="sm"
             className="absolute right-4 top-4 rounded-full bg-black/50 p-2 transition-colors hover:bg-black/70"
             onClick={() => setShowEditModal(true)}
-            title="Edit cover photo"
+            title={t("profile.editCover")}
           >
             <Camera className="h-5 w-5 text-white" />
           </Button>
@@ -160,7 +181,7 @@ export default function ProfilePage() {
               size="sm"
               className="absolute bottom-2 right-2 rounded-full bg-black/70 p-2 transition-colors hover:bg-black/90"
               onClick={() => setShowEditModal(true)}
-              title="Edit profile photo"
+              title={t("profile.editPhoto")}
             >
               <Camera className="h-4 w-4 text-white" />
             </Button>
@@ -174,7 +195,7 @@ export default function ProfilePage() {
             className="rounded-full border-gray-600 bg-gray-950 px-6 font-semibold text-white transition-all hover:bg-gray-900 active:scale-[0.98]"
             onClick={() => setShowEditModal(true)}
           >
-            Edit profile
+            {t("profile.edit")}
           </Button>
         </div>
       </div>
@@ -192,7 +213,7 @@ export default function ProfilePage() {
             {user.plan && user.plan !== "free" && (
               <span className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-500/20 px-3 py-1 text-xs font-semibold text-yellow-400 ring-1 ring-yellow-500/30">
                 <Crown className="h-3.5 w-3.5" />
-                {PLAN_LABELS[user.plan] ?? user.plan}
+                {t(`pricing.plans.${user.plan}.name`)}
               </span>
             )}
             <Button
@@ -214,36 +235,38 @@ export default function ProfilePage() {
             <span className="font-bold">
               {user.following?.length ?? 0}
             </span>{" "}
-            <span className="text-gray-400">Following</span>
+            <span className="text-gray-400">{t("profile.following")}</span>
           </span>
           <span className="text-white">
             <span className="font-bold">
               {user.followedBy?.length ?? 0}
             </span>{" "}
-            <span className="text-gray-400">Followers</span>
+            <span className="text-gray-400">{t("profile.followers")}</span>
           </span>
         </div>
 
         <div className="flex items-center space-x-4 text-gray-400 text-sm mb-3">
           <div className="flex items-center space-x-1">
             <MapPin className="h-4 w-4" />
-            <span>{user.location || "Earth"}</span>
+            <span>{user.location || t("profile.locationDefault")}</span>
           </div>
           <div className="flex items-center space-x-1">
             <LinkIcon className="h-4 w-4" />
             <span className="text-blue-400">
-              {user.website || "example.com"}
+              {user.website || t("profile.websiteDefault")}
             </span>
           </div>
           <div className="flex items-center space-x-1">
             <Calendar className="h-4 w-4" />
             <span>
-              Joined{" "}
-              {user.joinedDate &&
-                new Date(user.joinedDate).toLocaleDateString("en-us", {
-                  month: "long",
-                  year: "numeric",
-                })}
+              {t("profile.joined", {
+                date: user.joinedDate
+                  ? new Date(user.joinedDate).toLocaleDateString(i18n.language, {
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "",
+              })}
             </span>
           </div>
         </div>
@@ -258,25 +281,23 @@ export default function ProfilePage() {
                 <Bell className="mt-0.5 h-5 w-5 text-blue-400 shrink-0" />
                 <div>
                   <p className="font-semibold text-white">
-                    Notify me about cricket/science tweets
+                    {t("profile.notificationTitle")}
                   </p>
                   <p className="mt-1 text-xs text-gray-400">
-                    Get a browser popup when someone posts a tweet mentioning
-                    &quot;cricket&quot; or &quot;science&quot;.
+                    {t("profile.notificationDesc")}
                   </p>
                   {user.notificationsEnabled &&
                     !("Notification" in window) &&
                     typeof window !== "undefined" && (
                       <p className="mt-1 text-xs text-yellow-400">
-                        Your browser doesn&apos;t support notifications.
+                        {t("profile.notificationUnsupported")}
                       </p>
                     )}
                   {user.notificationsEnabled &&
                     "Notification" in window &&
                     Notification.permission !== "granted" && (
                       <p className="mt-1 text-xs text-yellow-400">
-                        Notifications are blocked in your browser. Enable them in
-                        your browser settings to receive popups.
+                        {t("profile.notificationBlocked")}
                       </p>
                     )}
                 </div>
@@ -306,10 +327,53 @@ export default function ProfilePage() {
         </Card>
       </div>
 
+      {/* Language */}
+      <div className="px-4 pb-6">
+        <Card className="bg-black border-gray-800">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start space-x-3">
+                <Languages className="mt-0.5 h-5 w-5 text-blue-400 shrink-0" />
+                <div>
+                  <p className="font-semibold text-white">
+                    {t("language.title")}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {t("language.subtitle")}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <label
+                htmlFor="language-select"
+                className="mb-1 block text-xs font-medium text-gray-400"
+              >
+                {t("language.switchLabel")}
+              </label>
+              <select
+                id="language-select"
+                value={i18n.language}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+                className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+              >
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Login History */}
       {loginHistory.length > 0 && (
         <div className="px-4 pb-6">
-          <h2 className="mb-2 text-lg font-bold text-white">Login History</h2>
+          <h2 className="mb-2 text-lg font-bold text-white">
+            {t("profile.loginHistory")}
+          </h2>
           <Card className="bg-black border-gray-800">
             <CardContent className="p-0 divide-y divide-gray-800">
               {loginHistory.map((entry) => (
@@ -342,7 +406,9 @@ export default function ProfilePage() {
                       {timeAgo(entry.timestamp)}
                     </p>
                     {entry.otpVerified && (
-                      <p className="text-xs text-green-400">OTP verified</p>
+                      <p className="text-xs text-green-400">
+                        {t("profile.otpVerified")}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -359,31 +425,31 @@ export default function ProfilePage() {
             value="posts"
             className="data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none text-gray-400 hover:bg-gray-900/50 py-4 font-semibold"
           >
-            Posts
+            {t("profile.tabPosts")}
           </TabsTrigger>
           <TabsTrigger
             value="replies"
             className="data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none text-gray-400 hover:bg-gray-900/50 py-4 font-semibold"
           >
-            Replies
+            {t("profile.tabReplies")}
           </TabsTrigger>
           <TabsTrigger
             value="highlights"
             className="data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none text-gray-400 hover:bg-gray-900/50 py-4 font-semibold"
           >
-            Highlights
+            {t("profile.tabHighlights")}
           </TabsTrigger>
           <TabsTrigger
             value="articles"
             className="data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none text-gray-400 hover:bg-gray-900/50 py-4 font-semibold"
           >
-            Articles
+            {t("profile.tabArticles")}
           </TabsTrigger>
           <TabsTrigger
             value="media"
             className="data-[state=active]:bg-transparent data-[state=active]:text-white data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:rounded-none text-gray-400 hover:bg-gray-900/50 py-4 font-semibold"
           >
-            Media
+            {t("profile.tabMedia")}
           </TabsTrigger>
         </TabsList>
 
@@ -412,9 +478,9 @@ export default function ProfilePage() {
                 <CardContent className="py-12 text-center">
                   <div className="text-gray-400">
                     <h3 className="text-2xl font-bold mb-2">
-                      You haven&apos;t posted yet
+                      {t("profile.emptyPostsTitle")}
                     </h3>
-                    <p>When you post, it will show up here.</p>
+                    <p>{t("profile.emptyPostsDesc")}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -431,9 +497,9 @@ export default function ProfilePage() {
             <CardContent className="py-12 text-center">
               <div className="text-gray-400">
                 <h3 className="text-2xl font-bold mb-2">
-                  You haven&apos;t replied yet
+                  {t("profile.emptyRepliesTitle")}
                 </h3>
-                <p>When you reply to a post, it will show up here.</p>
+                <p>{t("profile.emptyRepliesDesc")}</p>
               </div>
             </CardContent>
           </Card>
@@ -444,9 +510,9 @@ export default function ProfilePage() {
             <CardContent className="py-12 text-center">
               <div className="text-gray-400">
                 <h3 className="text-2xl font-bold mb-2">
-                  Lights, camera … attachments!
+                  {t("profile.emptyHighlightsTitle")}
                 </h3>
-                <p>When you post photos or videos, they will show up here.</p>
+                <p>{t("profile.emptyHighlightsDesc")}</p>
               </div>
             </CardContent>
           </Card>
@@ -457,9 +523,9 @@ export default function ProfilePage() {
             <CardContent className="py-12 text-center">
               <div className="text-gray-400">
                 <h3 className="text-2xl font-bold mb-2">
-                  You haven&apos;t written any articles
+                  {t("profile.emptyArticlesTitle")}
                 </h3>
-                <p>When you write articles, they will show up here.</p>
+                <p>{t("profile.emptyArticlesDesc")}</p>
               </div>
             </CardContent>
           </Card>
@@ -470,9 +536,9 @@ export default function ProfilePage() {
             <CardContent className="py-12 text-center">
               <div className="text-gray-400">
                 <h3 className="text-2xl font-bold mb-2">
-                  Lights, camera … attachments!
+                  {t("profile.emptyMediaTitle")}
                 </h3>
-                <p>When you post photos or videos, they will show up here.</p>
+                <p>{t("profile.emptyMediaDesc")}</p>
               </div>
             </CardContent>
           </Card>
@@ -482,6 +548,12 @@ export default function ProfilePage() {
         isopen={showEditModal}
         onclose={() => setShowEditModal(false)}
       />
+      {showLanguageModal && pendingLanguage && (
+        <LanguageOtpModal
+          targetLanguage={pendingLanguage}
+          onClose={() => setShowLanguageModal(false)}
+        />
+      )}
     </div>
   );
 }

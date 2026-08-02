@@ -8,12 +8,14 @@ import LoadingSpinner from "./loading-spinner";
 import TwitterLogo from "./Twitterlogo";
 import { useAuth } from "@/context/AuthContext";
 import Feed from "./Feed";
+import { useTranslation } from "react-i18next";
 
 export default function LandingPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
   const { user, googlesignin, otpPending, isLoading, authStatus, slowConnect } =
     useAuth();
+  const { t } = useTranslation();
 
   const openAuthModal = (mode: "login" | "signup") => {
     setAuthMode(mode);
@@ -39,10 +41,10 @@ export default function LandingPage() {
         <div className="space-y-12">
           <div>
             <h1 className="mb-8 text-5xl font-bold leading-tight lg:text-6xl">
-              Happening now
+              {t("landing.happeningNow")}
             </h1>
             <h2 className="mb-8 text-2xl font-bold lg:text-3xl">
-              Join today.
+              {t("landing.joinToday")}
             </h2>
           </div>
 
@@ -75,14 +77,14 @@ export default function LandingPage() {
                   />
                 </svg>
               )}
-              {isLoading ? "Signing in..." : "Sign up with Google"}
+              {isLoading ? t("auth.signingIn") : t("landing.signUpGoogle")}
             </Button>
 
             {authStatus === "verifying" && (
               <p className="text-xs leading-relaxed text-blue-300">
                 {slowConnect
-                  ? "Still connecting... the server may be waking up, please wait a little longer."
-                  : "Connecting to server — this can take up to a minute on first login."}
+                  ? t("auth.connectingSlow")
+                  : t("auth.connectingFirstTime")}
               </p>
             )}
 
@@ -90,7 +92,7 @@ export default function LandingPage() {
               variant="outline"
               className="h-12 w-full rounded-full border-gray-600 bg-black text-base font-semibold text-white opacity-50 transition-all hover:bg-gray-900"
               disabled
-              title="Coming soon"
+              title={t("landing.comingSoon")}
             >
               <svg
                 className="mr-2 h-5 w-5"
@@ -99,7 +101,7 @@ export default function LandingPage() {
               >
                 <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
               </svg>
-              Sign up with Apple
+              {t("landing.signUpApple")}
             </Button>
 
             <div className="relative">
@@ -107,7 +109,7 @@ export default function LandingPage() {
                 <span className="w-full border-t border-gray-600" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-black px-2 text-gray-400">or</span>
+                <span className="bg-black px-2 text-gray-400">{t("landing.or")}</span>
               </div>
             </div>
 
@@ -115,34 +117,22 @@ export default function LandingPage() {
               className="h-12 w-full rounded-full bg-blue-500 text-base font-semibold text-white transition-all hover:bg-blue-600 active:scale-[0.98]"
               onClick={() => openAuthModal("signup")}
             >
-              Create account
+              {t("landing.createAccount")}
             </Button>
 
             <p className="text-xs leading-relaxed text-gray-400">
-              By signing up, you agree to the{" "}
-              <a href="#" className="text-blue-400 hover:underline">
-                Terms of Service
-              </a>{" "}
-              and{" "}
-              <a href="#" className="text-blue-400 hover:underline">
-                Privacy Policy
-              </a>
-              , including{" "}
-              <a href="#" className="text-blue-400 hover:underline">
-                Cookie Use
-              </a>
-              .
+              {t("landing.signupTerms")}
             </p>
           </div>
 
           <div className="space-y-5">
-            <p className="text-lg font-bold">Already have an account?</p>
+            <p className="text-lg font-bold">{t("landing.hasAccount")}</p>
             <Button
               variant="outline"
               className="h-12 w-full max-w-xs rounded-full border-gray-600 text-base font-semibold text-blue-400 transition-all hover:bg-blue-500/10 active:scale-[0.98]"
               onClick={() => openAuthModal("login")}
             >
-              Log in
+              {t("landing.logIn")}
             </Button>
           </div>
         </div>

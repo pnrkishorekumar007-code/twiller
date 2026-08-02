@@ -11,6 +11,7 @@ import paymentRouter from "./routes/payment.js";
 import passwordResetRouter from "./routes/passwordReset.js";
 import loginSecurityRouter from "./routes/loginSecurity.js";
 import audioTweetRouter from "./routes/audioTweet.js";
+import languageRouter from "./routes/language.js";
 import { verifyAuth } from "./middleware/verifyAuth.js";
 import getFirebaseAdmin from "./utils/firebaseAdmin.js";
 import { getAuth } from "firebase-admin/auth";
@@ -323,6 +324,8 @@ app.use("/auth", passwordResetRouter);
 app.use("/auth", loginSecurityRouter);
 // Audio Tweet API
 app.use("/audio", audioTweetRouter);
+// Language API
+app.use("/api", languageRouter);
 
 // Tweet API
 

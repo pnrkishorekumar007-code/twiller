@@ -18,8 +18,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import TweetCard, { type Tweet } from "./TweetCard";
 import axiosInstance from "@/lib/axiosInstance";
-import { PLAN_LABELS } from "@/lib/plans";
 import VerifiedBadge from "./VerifiedBadge";
+import { useTranslation } from "react-i18next";
 
 interface ProfileUser {
   _id: string;
@@ -40,6 +40,7 @@ export default function UserProfilePage({ userId }: { userId: string }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { goBack } = useNav();
+  const { t, i18n } = useTranslation();
   const [profile, setProfile] = useState<ProfileUser | null>(null);
   const [tweets, setTweets] = useState<Tweet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,10 +90,10 @@ export default function UserProfilePage({ userId }: { userId: string }) {
             }
           : prev
       );
-      toast(wasFollowing ? "Unfollowed" : "Following", "success");
+      toast(wasFollowing ? t("follow.unfollowed") : t("follow.following"), "success");
     } catch {
       setFollowing(wasFollowing);
-      toast("Failed to update follow. Try again.", "error");
+      toast(t("follow.failed"), "error");
     } finally {
       setFollowBusy(false);
     }
@@ -109,9 +110,9 @@ export default function UserProfilePage({ userId }: { userId: string }) {
   if (!profile) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center px-8 text-center">
-        <p className="text-lg font-semibold text-gray-300">User not found</p>
+        <p className="text-lg font-semibold text-gray-300">{t("userProfile.notFound")}</p>
         <p className="text-sm text-gray-500">
-          This profile may have been removed.
+          {t("userProfile.notFoundDesc")}
         </p>
       </div>
     );
@@ -133,7 +134,9 @@ export default function UserProfilePage({ userId }: { userId: string }) {
             <h1 className="text-xl font-bold text-white">
               {profile.displayName}
             </h1>
-            <p className="text-sm text-gray-400">{tweets.length} posts</p>
+            <p className="text-sm text-gray-400">
+              {t("userProfile.posts", { count: tweets.length })}
+            </p>
           </div>
         </div>
       </div>
@@ -163,12 +166,12 @@ export default function UserProfilePage({ userId }: { userId: string }) {
           {following ? (
             <span className="flex items-center gap-1">
               <UserCheck className="h-4 w-4" />
-              Following
+              {t("follow.following")}
             </span>
           ) : (
             <span className="flex items-center gap-1">
               <UserPlus className="h-4 w-4" />
-              Follow
+              {t("follow.follow")}
             </span>
           )}
         </Button>
@@ -188,7 +191,7 @@ export default function UserProfilePage({ userId }: { userId: string }) {
           {profile.plan && profile.plan !== "free" && (
             <span className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-yellow-500/20 to-amber-500/20 px-3 py-1 text-xs font-semibold text-yellow-400 ring-1 ring-yellow-500/30">
               <Crown className="h-3.5 w-3.5" />
-              {PLAN_LABELS[profile.plan] ?? profile.plan}
+              {t(`pricing.plans.${profile.plan}.name`)}
             </span>
           )}
         </div>
@@ -200,11 +203,11 @@ export default function UserProfilePage({ userId }: { userId: string }) {
         <div className="mb-3 flex items-center space-x-4 text-sm">
           <span className="text-white">
             <span className="font-bold">{profile.following?.length ?? 0}</span>{" "}
-            <span className="text-gray-400">Following</span>
+            <span className="text-gray-400">{t("profile.following")}</span>
           </span>
           <span className="text-white">
             <span className="font-bold">{profile.followedBy?.length ?? 0}</span>{" "}
-            <span className="text-gray-400">Followers</span>
+            <span className="text-gray-400">{t("profile.followers")}</span>
           </span>
         </div>
 
@@ -224,12 +227,14 @@ export default function UserProfilePage({ userId }: { userId: string }) {
           <div className="flex items-center space-x-1">
             <Calendar className="h-4 w-4" />
             <span>
-              Joined{" "}
-              {profile.joinedDate &&
-                new Date(profile.joinedDate).toLocaleDateString("en-us", {
-                  month: "long",
-                  year: "numeric",
-                })}
+              {t("userProfile.joined", {
+                date:
+                  profile.joinedDate &&
+                  new Date(profile.joinedDate).toLocaleDateString(i18n.language, {
+                    month: "long",
+                    year: "numeric",
+                  }),
+              })}
             </span>
           </div>
         </div>
@@ -237,14 +242,14 @@ export default function UserProfilePage({ userId }: { userId: string }) {
 
       <div className="border-y border-gray-800">
         <div className="border-b-2 border-blue-500 px-4 py-4 text-center font-semibold text-white">
-          Posts
+          {t("userProfile.posts")}
         </div>
       </div>
 
       <div className="divide-y divide-gray-800">
         {tweets.length === 0 ? (
           <p className="py-16 text-center text-sm text-gray-500">
-            @{profile.username} hasn&apos;t posted yet
+            {t("userProfile.noTweets", { username: profile.username })}
           </p>
         ) : (
           tweets.map((tweet) => <TweetCard key={tweet._id} tweet={tweet} />)

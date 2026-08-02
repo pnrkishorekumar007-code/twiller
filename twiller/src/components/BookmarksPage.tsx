@@ -5,9 +5,11 @@ import { Bookmark } from "lucide-react";
 import TweetCard, { type Tweet } from "./TweetCard";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 export default function BookmarksPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [tweets, setTweets] = useState<Tweet[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,9 +56,9 @@ export default function BookmarksPage() {
   return (
     <div className="min-h-screen">
       <div className="sticky top-0 z-10 border-b border-gray-800 bg-black/90 px-4 py-3 backdrop-blur-md">
-        <h1 className="text-xl font-bold text-white">Bookmarks</h1>
+        <h1 className="text-xl font-bold text-white">{t("bookmarks.title")}</h1>
         <p className="text-sm text-gray-500">
-          @{user?.username || "you"} · Saved tweets
+          {t("bookmarks.savedTweets", { username: user?.username || "you" })}
         </p>
       </div>
 
@@ -72,10 +74,10 @@ export default function BookmarksPage() {
             <Bookmark className="h-7 w-7 text-gray-500" />
           </div>
           <p className="mb-1 text-lg font-bold text-white">
-            Save posts for later
+            {t("bookmarks.emptyTitle")}
           </p>
           <p className="max-w-xs text-sm text-gray-500">
-            Bookmark posts to easily find them again in the future.
+            {t("bookmarks.emptyDesc")}
           </p>
         </div>
       ) : (

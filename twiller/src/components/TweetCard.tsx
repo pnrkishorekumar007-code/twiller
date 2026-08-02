@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNav } from "@/context/NavContext";
 import axiosInstance from "@/lib/axiosInstance";
 import CommentModal from "./CommentModal";
+import { useTranslation } from "react-i18next";
 
 interface Author {
   _id?: string;
@@ -48,6 +49,7 @@ export default function TweetCard({
 }) {
   const { user } = useAuth();
   const { openProfile } = useNav();
+  const { t, i18n } = useTranslation();
   const [tweetstate, settweetstate] = useState(tweet);
   const [bookmarked, setBookmarked] = useState(!!tweet.bookmarked);
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -102,7 +104,7 @@ export default function TweetCard({
   const rawAuthor = tweetstate.author;
   const author =
     typeof rawAuthor === "object" && rawAuthor !== null ? rawAuthor : undefined;
-  const authorName = author?.displayName || "Unknown user";
+  const authorName = author?.displayName || t("tweet.unknownUser");
   const authorUsername = author?.username || "unknown";
   const authorAvatar =
     author?.avatar ||
@@ -117,7 +119,7 @@ export default function TweetCard({
               if (author?._id) openProfile(author._id);
             }}
             className="shrink-0 rounded-full focus:outline-none"
-            aria-label={`View ${authorName}'s profile`}
+            aria-label={t("tweet.viewProfile", { name: authorName })}
           >
             <Avatar className="h-12 w-12 ring-2 ring-transparent transition-shadow group-hover/card:ring-gray-800">
               <AvatarImage src={authorAvatar} alt={authorName} />
@@ -158,7 +160,7 @@ export default function TweetCard({
               <span className="text-gray-500">·</span>
               <span className="text-gray-500">
                 {tweetstate.timestamp &&
-                  new Date(tweetstate.timestamp).toLocaleDateString("en-us", {
+                  new Date(tweetstate.timestamp).toLocaleDateString(i18n.language, {
                     month: "long",
                     year: "numeric",
                   })}
@@ -173,7 +175,7 @@ export default function TweetCard({
               <div className="mb-3 rounded-2xl overflow-hidden">
                 <img
                   src={tweetstate.image}
-                  alt="Tweet image"
+                  alt={t("tweet.image")}
                   loading="lazy"
                   className="w-full h-auto max-h-96 object-cover"
                 />
@@ -244,7 +246,10 @@ export default function TweetCard({
                 className="group flex items-center gap-1.5 rounded-full p-2 text-gray-500 transition-all hover:bg-blue-900/20 hover:text-blue-400 active:scale-90"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const text = `${authorName}: "${tweetstate.content}"`;
+                  const text = t("tweet.shareText", {
+                    author: authorName,
+                    content: tweetstate.content,
+                  });
                   if (navigator.share) {
                     navigator.share({ title: "Twiller", text }).catch(() => {});
                   } else {

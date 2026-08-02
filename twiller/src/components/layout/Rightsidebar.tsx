@@ -20,6 +20,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
 import { useNav } from "@/context/NavContext";
 import { useToast } from "@/context/ToastContext";
+import { useTranslation } from "react-i18next";
 
 interface SuggestedUser {
   _id: string;
@@ -35,6 +36,7 @@ export default function RightSidebar() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { openProfile, search } = useNav();
+  const { t } = useTranslation();
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState<Set<string>>(new Set());
@@ -122,7 +124,7 @@ export default function RightSidebar() {
 
   const toggleFollow = async (id: string) => {
     if (!user) {
-      toast("Log in to follow users", "error");
+      toast(t("follow.loginRequired"), "error");
       return;
     }
     const wasFollowing = following.has(id);
@@ -137,7 +139,7 @@ export default function RightSidebar() {
     });
     try {
       await axiosInstance.post(`/follow/${id}`, { userId: user._id });
-      toast(wasFollowing ? "Unfollowed" : "Following", "success");
+      toast(wasFollowing ? t("follow.unfollowed") : t("follow.following"), "success");
     } catch {
       setFollowing((prev) => {
         const next = new Set(prev);
@@ -148,7 +150,7 @@ export default function RightSidebar() {
         }
         return next;
       });
-      toast("Failed to update follow. Try again.", "error");
+      toast(t("follow.failed"), "error");
     }
   };
 
@@ -163,7 +165,7 @@ export default function RightSidebar() {
           <button
             onClick={() => openProfile(u._id)}
             className="shrink-0 rounded-full focus:outline-none"
-            aria-label={`View ${u.displayName}'s profile`}
+            aria-label={t("follow.viewProfile", { name: u.displayName })}
           >
             <Avatar className="h-10 w-10 shrink-0">
               <AvatarImage src={u.avatar || ""} alt={u.displayName} />
@@ -194,12 +196,12 @@ export default function RightSidebar() {
           {isFollowing ? (
             <span className="flex items-center gap-1">
               <UserCheck className="h-4 w-4" />
-              Following
+              {t("follow.following")}
             </span>
           ) : (
             <span className="flex items-center gap-1">
               <UserPlus className="h-4 w-4" />
-              Follow
+              {t("follow.follow")}
             </span>
           )}
         </Button>
@@ -213,7 +215,7 @@ export default function RightSidebar() {
         <div className="relative">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           <Input
-            placeholder="Search"
+            placeholder={t("search.placeholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => query.trim() && setSearchOpen(true)}
@@ -228,7 +230,7 @@ export default function RightSidebar() {
                 <button
                   className="rounded-full p-0.5 text-gray-400 hover:text-white"
                   onClick={() => setQuery("")}
-                  aria-label="Clear search"
+                  aria-label={t("search.clear")}
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
                     <path
@@ -247,7 +249,7 @@ export default function RightSidebar() {
               <div className="max-h-80 space-y-1 overflow-y-auto p-2">
                 {searchResults.length === 0 && !searching ? (
                   <p className="p-4 text-center text-sm text-gray-400">
-                    No users found
+                    {t("search.noResults")}
                   </p>
                 ) : (
                   searchResults.map((u) =>
@@ -264,16 +266,16 @@ export default function RightSidebar() {
             <div className="mb-2 flex items-center gap-2">
               <Crown className="h-5 w-5 text-yellow-400" />
               <h3 className="text-lg font-bold text-white">
-                Subscribe to Premium
+                {t("premium.subscribeTitle")}
               </h3>
             </div>
             <p className="mb-4 text-sm text-gray-400">
-              Subscribe to unlock new features and get more tweets every month.
+              {t("premium.subscribeDesc")}
             </p>
             <Link href="/pricing">
               <Button className="w-full rounded-full bg-blue-500 py-2.5 font-semibold text-white transition-all hover:bg-blue-600 active:scale-[0.98]">
                 <Sparkles className="h-4 w-4" />
-                Upgrade
+                {t("premium.upgrade")}
               </Button>
             </Link>
           </CardContent>
@@ -285,23 +287,23 @@ export default function RightSidebar() {
           <CardContent className="p-4">
             <div className="mb-3 flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-blue-400" />
-              <h3 className="text-lg font-bold text-white">Trends for you</h3>
+              <h3 className="text-lg font-bold text-white">{t("trends.forYou")}</h3>
             </div>
             <div>
-              {trends.map((t, i) => (
+              {trends.map((trend, i) => (
                 <button
-                  key={t.tag}
-                  onClick={() => search(t.tag)}
+                  key={trend.tag}
+                  onClick={() => search(trend.tag)}
                   className="flex w-full items-center justify-between rounded-xl p-2 text-left transition-colors hover:bg-gray-800/60"
                 >
                   <div>
                     <div className="text-xs text-gray-500">
-                      Trending {i + 1}
+                      {t("trends.trending", { n: i + 1 })}
                     </div>
-                    <div className="font-semibold text-white">{t.tag}</div>
+                    <div className="font-semibold text-white">{trend.tag}</div>
                   </div>
                   <div className="text-xs text-gray-500">
-                    {t.count} {t.count === 1 ? "post" : "posts"}
+                    {t("trends.posts", { count: trend.count })}
                   </div>
                 </button>
               ))}
@@ -312,7 +314,7 @@ export default function RightSidebar() {
 
       <Card className="overflow-hidden rounded-2xl border-gray-800 bg-gray-900/80">
         <CardContent className="p-4">
-          <h3 className="mb-4 text-lg font-bold text-white">You might like</h3>
+          <h3 className="mb-4 text-lg font-bold text-white">{t("suggestions.title")}</h3>
           {loading ? (
             <div className="space-y-4">
               {[0, 1, 2].map((i) => (
@@ -328,7 +330,7 @@ export default function RightSidebar() {
           ) : (
             suggestions.length === 0 ? (
               <p className="py-6 text-center text-sm text-gray-500">
-                No suggestions right now.
+                {t("suggestions.empty")}
               </p>
             ) : (
               <div className="space-y-4">{suggestions.map(renderUser)}</div>
@@ -340,22 +342,22 @@ export default function RightSidebar() {
       <div className="space-y-2 p-4 text-xs text-gray-500">
         <div className="flex flex-wrap gap-x-3 gap-y-1">
           <a href="#" className="hover:underline">
-            Terms of Service
+            {t("footer.terms")}
           </a>
           <a href="#" className="hover:underline">
-            Privacy Policy
+            {t("footer.privacy")}
           </a>
           <a href="#" className="hover:underline">
-            Cookie Policy
+            {t("footer.cookies")}
           </a>
           <a href="#" className="hover:underline">
-            Accessibility
+            {t("footer.accessibility")}
           </a>
           <a href="#" className="hover:underline">
-            Ads info
+            {t("footer.adsInfo")}
           </a>
         </div>
-        <div>© {new Date().getFullYear()} Twiller.</div>
+        <div>{t("common.copyright", { year: new Date().getFullYear() })}</div>
       </div>
     </div>
   );

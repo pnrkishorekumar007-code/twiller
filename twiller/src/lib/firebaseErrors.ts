@@ -1,27 +1,20 @@
-const FIREBASE_ERROR_MESSAGES: Record<string, string> = {
-  "auth/email-already-in-use":
-    "An account with this email already exists. Try logging in instead.",
-  "auth/invalid-email": "Please enter a valid email address.",
-  "auth/wrong-password": "Incorrect password. Please try again.",
-  "auth/user-not-found":
-    "No account found with this email. Please sign up first.",
-  "auth/invalid-credential": "Invalid email or password. Please try again.",
-  "auth/weak-password":
-    "Password is too weak. Use at least 6 characters.",
-  "auth/user-disabled":
-    "This account has been disabled. Contact support.",
-  "auth/too-many-requests":
-    "Too many attempts. Please try again later.",
-  "auth/network-request-failed":
-    "Network error. Check your connection and try again.",
-  "auth/operation-not-allowed": "This sign-in method is not enabled.",
-  "auth/popup-closed-by-user":
-    "Sign-in popup was closed before completing.",
+const FIREBASE_ERROR_KEYS: Record<string, string> = {
+  "auth/email-already-in-use": "errors.emailInUse",
+  "auth/invalid-email": "errors.invalidEmail",
+  "auth/wrong-password": "errors.wrongPassword",
+  "auth/user-not-found": "errors.userNotFound",
+  "auth/invalid-credential": "errors.invalidCredential",
+  "auth/weak-password": "errors.weakPassword",
+  "auth/user-disabled": "errors.userDisabled",
+  "auth/too-many-requests": "errors.tooManyRequests",
+  "auth/network-request-failed": "errors.networkError",
+  "auth/operation-not-allowed": "errors.operationNotAllowed",
+  "auth/popup-closed-by-user": "errors.popupClosed",
   "auth/account-exists-with-different-credential":
-    "An account already exists with the same email using a different sign-in method.",
-  "auth/invalid-verification-code": "Invalid verification code.",
-  "auth/invalid-verification-id": "Invalid verification ID.",
-  "auth/missing-password": "Please enter a password.",
+    "errors.accountExistsDifferentCredential",
+  "auth/invalid-verification-code": "errors.invalidVerificationCode",
+  "auth/invalid-verification-id": "errors.invalidVerificationId",
+  "auth/missing-password": "errors.missingPassword",
 };
 
 interface FirebaseLikeError {
@@ -29,7 +22,10 @@ interface FirebaseLikeError {
   message?: string;
 }
 
-export function getFirebaseErrorMessage(error: unknown): string {
+export function getFirebaseErrorMessage(
+  error: unknown,
+  t: (key: string) => string
+): string {
   const err = (error ?? null) as FirebaseLikeError | null;
   const serverMsg = (err as {
     response?: { data?: { error?: string } };
@@ -38,8 +34,8 @@ export function getFirebaseErrorMessage(error: unknown): string {
     return serverMsg;
   }
   const code = err?.code;
-  if (code && FIREBASE_ERROR_MESSAGES[code]) {
-    return FIREBASE_ERROR_MESSAGES[code];
+  if (code && FIREBASE_ERROR_KEYS[code]) {
+    return t(FIREBASE_ERROR_KEYS[code]);
   }
-  return err?.message || "Authentication failed. Please try again.";
+  return err?.message || t("errors.authFailed");
 }

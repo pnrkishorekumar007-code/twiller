@@ -2,12 +2,14 @@
 import { useEffect, useRef } from "react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 const KEYWORDS = ["cricket", "science"];
 const POLL_INTERVAL_MS = 20000;
 
 export function useKeywordNotifications() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const lastSeenIdRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
 
@@ -41,7 +43,9 @@ export function useKeywordNotifications() {
           const lower = tweet.content?.toLowerCase() || "";
           if (KEYWORDS.some((kw) => lower.includes(kw))) {
             new Notification(
-              `New tweet from ${tweet.author?.displayName || "someone"}`,
+              t("keywordNotifications.title", {
+                name: tweet.author?.displayName || "someone",
+              }),
               {
                 body: tweet.content,
               }
@@ -58,5 +62,5 @@ export function useKeywordNotifications() {
     poll();
     const interval = setInterval(poll, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [user?.notificationsEnabled]);
+  }, [user?.notificationsEnabled, t]);
 }

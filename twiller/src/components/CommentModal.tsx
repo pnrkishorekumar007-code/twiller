@@ -8,6 +8,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { timeAgo } from "@/lib/time";
+import { useTranslation } from "react-i18next";
 
 interface CommentAuthor {
   _id: string;
@@ -35,6 +36,7 @@ export default function CommentModal({
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState("");
@@ -78,7 +80,7 @@ export default function CommentModal({
   const submitComment = async () => {
     const content = text.trim();
     if (!content || !user) {
-      toast("Log in to comment", "error");
+      toast(t("comments.loginRequired"), "error");
       return;
     }
     setSending(true);
@@ -90,7 +92,7 @@ export default function CommentModal({
       setComments((prev) => [...prev, res.data]);
       setText("");
     } catch {
-      toast("Failed to post comment", "error");
+      toast(t("comments.postFailed"), "error");
     } finally {
       setSending(false);
     }
@@ -106,7 +108,7 @@ export default function CommentModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-          <h2 className="text-lg font-bold text-white">Post</h2>
+          <h2 className="text-lg font-bold text-white">{t("comments.title")}</h2>
           <button
             onClick={onClose}
             aria-label="Close"
@@ -120,7 +122,7 @@ export default function CommentModal({
           <TweetCard tweet={tweet} />
           <div className="border-t border-gray-800">
             <div className="px-4 py-3 text-sm font-semibold text-gray-400">
-              Replies
+              {t("comments.replies")}
             </div>
             {loading ? (
               <div className="flex justify-center py-8">
@@ -128,7 +130,7 @@ export default function CommentModal({
               </div>
             ) : comments.length === 0 ? (
               <p className="px-4 pb-6 text-center text-sm text-gray-500">
-                No replies yet. Start the conversation!
+                {t("comments.empty")}
               </p>
             ) : (
               <div className="divide-y divide-gray-800">
@@ -180,14 +182,14 @@ export default function CommentModal({
                 submitComment();
               }
             }}
-            placeholder="Post your reply"
+            placeholder={t("comments.replyPlaceholder")}
             maxLength={200}
             className="flex-1 border-b border-transparent bg-transparent py-2 text-white placeholder-gray-500 outline-none focus:border-blue-500"
           />
           <button
             onClick={submitComment}
             disabled={sending || !text.trim()}
-            aria-label="Post comment"
+            aria-label={t("comments.postComment")}
             className="rounded-full bg-blue-500 p-2 text-white transition-all hover:bg-blue-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {sending ? (

@@ -18,6 +18,8 @@ import React, {
 import { auth } from "./firebase";
 import axiosInstance from "../lib/axiosInstance";
 import { useToast } from "./ToastContext";
+import { applyLanguage } from "@/i18n/config";
+import { useTranslation } from "react-i18next";
 
 const PENDING_OTP_KEY = "twiller-pending-login-otp";
 
@@ -35,6 +37,7 @@ interface User {
   plan?: string;
   tweetCount?: number;
   notificationsEnabled?: boolean;
+  language?: string;
   following?: string[];
   followedBy?: string[];
 }
@@ -63,6 +66,7 @@ interface AuthContextType {
   otpPending: boolean;
   verifyLoginOtp: (otp: string) => Promise<void>;
   cancelLoginOtp: () => Promise<void>;
+  updateLanguage: (lang: string) => void;
   authStatus: "idle" | "signing-in" | "verifying" | "error";
   slowConnect: boolean;
 }
@@ -89,6 +93,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [slowConnect, setSlowConnect] = useState(false);
   const loginFlowRef = useRef(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
+
+  const storeUser = (u: User) => {
+    setUser(u);
+    localStorage.setItem("twitter-user", JSON.stringify(u));
+    applyLanguage(u.language);
+  };
+
+  const updateLanguage = (lang: string) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, language: lang };
+      localStorage.setItem("twitter-user", JSON.stringify(updated));
+      applyLanguage(lang);
+      return updated;
+    });
+  };
 
   const gateLogin = async (): Promise<
     "blocked" | "otpRequired" | "success"
@@ -106,9 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return "success";
     } catch (err) {
       if (err instanceof Error && err.message === "LOGIN_SESSION_TIMEOUT") {
-        throw new Error(
-          "The server is taking too long to respond. Please try again in a moment."
-        );
+        throw new Error(t("auth.serverTimeout"));
       }
       const data = (err as {
         response?: { data?: { blocked?: boolean; reason?: string } };
@@ -160,8 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           });
 
           if (res.data) {
-            setUser(res.data);
-            localStorage.setItem("twitter-user", JSON.stringify(res.data));
+            storeUser(res.data);
           }
         } catch (err) {
           console.log("Failed to fetch user:", err);
@@ -188,9 +206,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (gate === "blocked") {
         await signOut(auth);
-        throw new Error(
-          "Login from mobile devices is only allowed between 10:00 AM and 1:00 PM."
-        );
+        throw new Error(t("auth.mobileBlocked"));
       }
 
       if (gate === "otpRequired") {
@@ -201,12 +217,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (!firebaseuser.email) {
-        throw new Error("No email associated with this account");
+        throw new Error(t("auth.noEmail"));
       }
       const res = await fetchUserData(firebaseuser.email);
       if (res) {
-        setUser(res);
-        localStorage.setItem("twitter-user", JSON.stringify(res));
+        storeUser(res);
       }
       setAuthStatus("idle");
     } catch (err) {
@@ -247,8 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       const res = await axiosInstance.post("/register", newuser);
       if (res.data) {
-        setUser(res.data);
-        localStorage.setItem("twitter-user", JSON.stringify(res.data));
+        storeUser(res.data);
       }
       setAuthStatus("idle");
     } catch (err) {
@@ -287,8 +301,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         updatedUser
       );
       if (res.data) {
-        setUser(updatedUser);
-        localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
+        storeUser(updatedUser);
       }
     } catch (err) {
       console.error("updateProfile failed:", err);
@@ -308,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const firebaseuser = result.user;
 
       if (!firebaseuser?.email) {
-        throw new Error("No email found in Google account");
+        throw new Error(t("auth.googleNoEmail"));
       }
 
       setAuthStatus("verifying");
@@ -336,9 +349,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (gate === "blocked") {
         await signOut(auth);
-        throw new Error(
-          "Login from mobile devices is only allowed between 10:00 AM and 1:00 PM."
-        );
+        throw new Error(t("auth.mobileBlocked"));
       }
 
       if (gate === "otpRequired") {
@@ -349,9 +360,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (userData) {
-        setUser(userData);
-        localStorage.setItem("twitter-user", JSON.stringify(userData));
-        toast("Signed in with Google", "success");
+        storeUser(userData);
+        toast(t("auth.googleSignedIn"), "success");
       } else {
         throw new Error("Login/Register failed: No user data returned");
       }
@@ -366,7 +376,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         axiosErr?.response?.data?.error ||
         (error instanceof Error
           ? error.message
-          : "Login failed. Please try again.");
+          : t("auth.loginFailed"));
       toast(msg, "error");
     } finally {
       loginFlowRef.current = false;
@@ -380,15 +390,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const firebaseuser = auth.currentUser;
       if (!firebaseuser?.email) {
-        throw new Error("Session lost. Please log in again.");
+        throw new Error(t("auth.sessionLost"));
       }
 
       const res = await fetchUserData(firebaseuser.email);
       setOtpPending(false);
       sessionStorage.removeItem(PENDING_OTP_KEY);
       if (res) {
-        setUser(res);
-        localStorage.setItem("twitter-user", JSON.stringify(res));
+        storeUser(res);
       }
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response
@@ -425,6 +434,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         otpPending,
         verifyLoginOtp,
         cancelLoginOtp,
+        updateLanguage,
         authStatus,
         slowConnect,
       }}

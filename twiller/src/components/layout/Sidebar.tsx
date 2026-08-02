@@ -27,7 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import TwitterLogo from "../Twitterlogo";
 import { useAuth } from "@/context/AuthContext";
 import { useNotificationsUnread } from "@/lib/useNotificationsUnread";
-import { PLAN_LABELS } from "@/lib/plans";
+import { useTranslation } from "react-i18next";
 
 interface SidebarProps {
   currentPage?: string;
@@ -40,14 +40,15 @@ export default function Sidebar({
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const unreadCount = useNotificationsUnread(user?._id);
+  const { t } = useTranslation();
 
   const navigation = [
-    { name: "Home", icon: Home, current: currentPage === "home", page: "home" },
-    { name: "Explore", icon: Search, current: currentPage === "explore", page: "explore" },
-    { name: "Notifications", icon: Bell, current: currentPage === "notifications", page: "notifications", badge: true },
-    { name: "Messages", icon: Mail, current: currentPage === "messages", page: "messages" },
-    { name: "Bookmarks", icon: Bookmark, current: currentPage === "bookmarks", page: "bookmarks" },
-    { name: "Profile", icon: User, current: currentPage === "profile", page: "profile" },
+    { name: t("nav.home"), icon: Home, current: currentPage === "home", page: "home" },
+    { name: t("nav.explore"), icon: Search, current: currentPage === "explore", page: "explore" },
+    { name: t("nav.notifications"), icon: Bell, current: currentPage === "notifications", page: "notifications", badge: true },
+    { name: t("nav.messages"), icon: Mail, current: currentPage === "messages", page: "messages" },
+    { name: t("nav.bookmarks"), icon: Bookmark, current: currentPage === "bookmarks", page: "bookmarks" },
+    { name: t("nav.profile"), icon: User, current: currentPage === "profile", page: "profile" },
   ];
 
   return (
@@ -88,15 +89,15 @@ export default function Sidebar({
         <div className="mt-8 space-y-3 px-2">
           <Link
             href="/pricing"
-            title="Premium"
+            title={t("nav.premium")}
             className="flex w-full items-center justify-center gap-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-2.5 text-lg font-semibold text-white transition-transform hover:scale-[1.02] active:scale-[0.98] md:justify-start"
           >
             <Crown className="h-6 w-6 shrink-0" />
-            <span className="hidden md:inline">Premium</span>
+            <span className="hidden md:inline">{t("nav.premium")}</span>
           </Link>
           <button
             onClick={() => onNavigate?.("home")}
-            title="Post"
+            title={t("nav.post")}
             className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-lg font-bold text-white transition-all hover:bg-blue-600 active:scale-[0.98] md:h-auto md:w-full md:rounded-full md:py-3"
           >
             <span className="md:hidden">
@@ -104,7 +105,7 @@ export default function Sidebar({
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
             </span>
-            <span className="hidden md:inline">Post</span>
+            <span className="hidden md:inline">{t("nav.post")}</span>
           </button>
         </div>
       </nav>
@@ -129,7 +130,7 @@ export default function Sidebar({
                   </div>
                 </div>
                 <span className="hidden rounded-full border border-blue-500/40 bg-blue-500/10 px-2 py-0.5 text-[11px] font-semibold text-blue-400 md:block">
-                  {PLAN_LABELS[user.plan || "free"]}
+                  {t(`pricing.plans.${user.plan || "free"}.name`)}
                 </span>
                 <MoreHorizontal className="h-5 w-5 shrink-0 text-gray-400" />
               </button>
@@ -140,11 +141,11 @@ export default function Sidebar({
                 onClick={() => onNavigate?.("profile")}
               >
                 <User className="mr-2 h-4 w-4" />
-                Profile
+                {t("nav.profile")}
               </DropdownMenuItem>
               <DropdownMenuItem className="text-white hover:bg-gray-900">
                 <Settings className="mr-2 h-4 w-4" />
-                Settings
+                {t("sidebar.settings")}
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-gray-800" />
               <DropdownMenuItem
@@ -152,7 +153,7 @@ export default function Sidebar({
                 onClick={logout}
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                Log out @{user.username}
+                {t("sidebar.logOut", { username: user.username })}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

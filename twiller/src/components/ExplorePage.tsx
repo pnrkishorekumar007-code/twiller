@@ -12,6 +12,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
 import { useNav } from "@/context/NavContext";
 import { useToast } from "@/context/ToastContext";
+import { useTranslation } from "react-i18next";
 
 interface SuggestedUser {
   _id: string;
@@ -33,6 +34,7 @@ export default function ExplorePage({
   const { user } = useAuth();
   const { toast } = useToast();
   const { openProfile } = useNav();
+  const { t } = useTranslation();
 
   const [query, setQuery] = useState(initialQuery);
   const [activeTab, setActiveTab] = useState<ExploreTab>("top");
@@ -109,7 +111,7 @@ export default function ExplorePage({
 
   const toggleFollow = async (id: string) => {
     if (!user) {
-      toast("Log in to follow users", "error");
+      toast(t("follow.loginRequired"), "error");
       return;
     }
     const wasFollowing = following.has(id);
@@ -124,7 +126,7 @@ export default function ExplorePage({
     });
     try {
       await axiosInstance.post(`/follow/${id}`, { userId: user._id });
-      toast(wasFollowing ? "Unfollowed" : "Following", "success");
+      toast(wasFollowing ? t("follow.unfollowed") : t("follow.following"), "success");
     } catch {
       setFollowing((prev) => {
         const next = new Set(prev);
@@ -135,7 +137,7 @@ export default function ExplorePage({
         }
         return next;
       });
-      toast("Failed to update follow. Try again.", "error");
+      toast(t("follow.failed"), "error");
     }
   };
 
@@ -150,7 +152,7 @@ export default function ExplorePage({
           <button
             onClick={() => openProfile(u._id)}
             className="shrink-0 rounded-full focus:outline-none"
-            aria-label={`View ${u.displayName}'s profile`}
+            aria-label={t("follow.viewProfile", { name: u.displayName })}
           >
             <Avatar className="h-11 w-11 shrink-0">
               <AvatarImage src={u.avatar || ""} alt={u.displayName} />
@@ -184,12 +186,12 @@ export default function ExplorePage({
           {isFollowing ? (
             <span className="flex items-center gap-1">
               <UserCheck className="h-4 w-4" />
-              Following
+              {t("follow.following")}
             </span>
           ) : (
             <span className="flex items-center gap-1">
               <UserPlus className="h-4 w-4" />
-              Follow
+              {t("follow.follow")}
             </span>
           )}
         </Button>
@@ -216,7 +218,7 @@ export default function ExplorePage({
       <SearchX className="mb-4 h-10 w-10 text-gray-700" />
       <p className="text-lg font-semibold text-gray-300">{label}</p>
       <p className="text-sm text-gray-500">
-        Try searching for something else.
+        {t("explore.trySearch")}
       </p>
     </div>
   );
@@ -225,12 +227,12 @@ export default function ExplorePage({
     <div className="min-h-screen">
       <div className="sticky top-0 z-10 border-b border-gray-800 bg-black/90 backdrop-blur-md">
         <div className="px-4 pt-3">
-          <h1 className="mb-3 text-xl font-bold text-white">Explore</h1>
+          <h1 className="mb-3 text-xl font-bold text-white">{t("explore.title")}</h1>
           <div className="relative">
             <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             <Input
               ref={inputRef}
-              placeholder="Search"
+              placeholder={t("explore.search")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="rounded-full border-transparent bg-gray-900 py-3 pl-12 pr-11 text-white placeholder-gray-500 transition-colors focus:border-blue-500 focus:bg-black focus:ring-blue-500/30"
@@ -242,7 +244,7 @@ export default function ExplorePage({
                   setQuery("");
                   inputRef.current?.focus();
                 }}
-                aria-label="Clear search"
+                aria-label={t("explore.clear")}
               >
                 {searching ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -272,13 +274,13 @@ export default function ExplorePage({
               value="top"
               className="relative rounded-none py-4 font-semibold text-gray-400 data-[state=active]:bg-transparent data-[state=active]:text-white after:absolute after:inset-x-0 after:bottom-0 after:mx-auto after:h-1 after:w-16 after:rounded-full after:bg-blue-500 after:opacity-0 after:content-[''] data-[state=active]:after:opacity-100 hover:bg-gray-900/50"
             >
-              Top
+              {t("explore.top")}
             </TabsTrigger>
             <TabsTrigger
               value="people"
               className="relative rounded-none py-4 font-semibold text-gray-400 data-[state=active]:bg-transparent data-[state=active]:text-white after:absolute after:inset-x-0 after:bottom-0 after:mx-auto after:h-1 after:w-16 after:rounded-full after:bg-blue-500 after:opacity-0 after:content-[''] data-[state=active]:after:opacity-100 hover:bg-gray-900/50"
             >
-              People
+              {t("explore.people")}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -293,7 +295,7 @@ export default function ExplorePage({
               <SkeletonCard />
             </>
           ) : posts.length === 0 ? (
-            emptyState(q ? `No posts found for "${q}"` : "No posts yet")
+            emptyState(q ? t("explore.noPostsQuery", { q }) : t("explore.noPosts"))
           ) : (
             posts.map((tweet) => <TweetCard key={tweet._id} tweet={tweet} />)
           )}
@@ -316,7 +318,7 @@ export default function ExplorePage({
               ))}
             </>
           ) : people.length === 0 ? (
-            emptyState(q ? `No people found for "${q}"` : "No people yet")
+            emptyState(q ? t("explore.noPeopleQuery", { q }) : t("explore.noPeople"))
           ) : (
             people.map(renderUser)
           )}

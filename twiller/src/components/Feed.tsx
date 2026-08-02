@@ -7,6 +7,7 @@ import TweetComposer from "./TweetComposer";
 import axiosInstance from "@/lib/axiosInstance";
 import { Bird, UserPlus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 interface Tweet {
   _id: string;
@@ -16,6 +17,7 @@ type FeedTab = "foryou" | "following";
 
 const Feed = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<FeedTab>("foryou");
   const [tweets, setTweets] = useState<Tweet[]>([]);
   const [followingTweets, setFollowingTweets] = useState<Tweet[]>([]);
@@ -105,7 +107,7 @@ const Feed = () => {
     <div className="min-h-screen">
       <div className="sticky top-0 z-10 border-b border-gray-800 bg-black/90 backdrop-blur-md">
         <div className="px-4 py-3">
-          <h1 className="text-xl font-bold text-white">Home</h1>
+          <h1 className="text-xl font-bold text-white">{t("feed.title")}</h1>
         </div>
 
         <Tabs
@@ -119,13 +121,13 @@ const Feed = () => {
               value="foryou"
               className="relative rounded-none py-4 font-semibold text-gray-400 data-[state=active]:bg-transparent data-[state=active]:text-white after:absolute after:inset-x-0 after:bottom-0 after:mx-auto after:h-1 after:w-16 after:rounded-full after:bg-blue-500 after:opacity-0 after:content-[''] data-[state=active]:after:opacity-100 hover:bg-gray-900/50"
             >
-              For you
+              {t("feed.forYou")}
             </TabsTrigger>
             <TabsTrigger
               value="following"
               className="relative rounded-none py-4 font-semibold text-gray-400 data-[state=active]:bg-transparent data-[state=active]:text-white after:absolute after:inset-x-0 after:bottom-0 after:mx-auto after:h-1 after:w-16 after:rounded-full after:bg-blue-500 after:opacity-0 after:content-[''] data-[state=active]:after:opacity-100 hover:bg-gray-900/50"
             >
-              Following
+              {t("feed.following")}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -143,20 +145,20 @@ const Feed = () => {
             <div className="flex flex-col items-center py-16 text-center">
               <UserPlus className="mb-4 h-10 w-10 text-gray-700" />
               <p className="text-lg font-semibold text-gray-300">
-                No tweets from people you follow
+                {t("feed.emptyFollowingTitle")}
               </p>
               <p className="text-sm text-gray-500">
-                Follow people on the right to see their tweets here.
+                {t("feed.emptyFollowingDesc")}
               </p>
             </div>
           ) : (
             <div className="flex flex-col items-center py-16 text-center">
               <Bird className="mb-4 h-10 w-10 text-gray-700" />
               <p className="text-lg font-semibold text-gray-300">
-                No tweets yet
+                {t("feed.emptyTitle")}
               </p>
               <p className="text-sm text-gray-500">
-                Be the first to post what&apos;s happening.
+                {t("feed.emptyDesc")}
               </p>
             </div>
           )

@@ -13,6 +13,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import Link from "next/link";
 import { useToast } from "@/context/ToastContext";
 import { PLAN_LIMITS } from "@/lib/plans";
+import { useTranslation } from "react-i18next";
 
 interface Tweet {
   _id: string;
@@ -25,6 +26,7 @@ const TweetComposer = ({
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [imageurl, setimageurl] = useState("");
@@ -43,7 +45,7 @@ const TweetComposer = ({
     if (!user || !content.trim()) return;
     if (isLoading) return;
     if (limitReached) {
-      toast("You've hit your plan limit", "error");
+      toast(t("composer.planLimit"), "error");
       return;
     }
     setIsLoading(true);
@@ -57,16 +59,16 @@ const TweetComposer = ({
       onTweetPosted?.(res.data);
       setContent("");
       setimageurl("");
-      toast("Tweet posted!", "success");
+      toast(t("composer.posted"), "success");
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
         if (error.response?.status === 403 && error.response?.data?.error) {
           toast(error.response.data.error, "error");
         } else {
-          toast("Something went wrong. Try again.", "error");
+          toast(t("composer.error"), "error");
         }
       } else {
-        toast("Something went wrong. Try again.", "error");
+        toast(t("composer.error"), "error");
       }
     } finally {
       setIsLoading(false);
@@ -92,10 +94,10 @@ const TweetComposer = ({
       const url = res.data.data.display_url;
       if (url) {
         setimageurl(url);
-        toast("Image attached", "success");
+        toast(t("composer.imageAttached"), "success");
       }
     } catch {
-      toast("Image upload failed. Try again.", "error");
+      toast(t("composer.imageUploadFailed"), "error");
     } finally {
       setIsUploading(false);
     }
@@ -113,7 +115,7 @@ const TweetComposer = ({
           <div className="flex-1">
             <form onSubmit={handleSubmit}>
               <Textarea
-                placeholder="What's happening?"
+                placeholder={t("composer.placeholder")}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="bg-transparent border-none text-xl text-white placeholder-gray-500 resize-none min-h-[120px] focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -123,13 +125,13 @@ const TweetComposer = ({
                 <div className="relative mb-3 mt-1 overflow-hidden rounded-2xl border border-gray-800">
                   <img
                     src={imageurl}
-                    alt="Attached image preview"
+                    alt={t("composer.imagePreview")}
                     className="max-h-96 w-full object-cover"
                   />
                   <button
                     type="button"
                     onClick={() => setimageurl("")}
-                    aria-label="Remove image"
+                    aria-label={t("composer.removeImage")}
                     className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-white transition-colors hover:bg-black"
                   >
                     <X className="h-4 w-4" />
@@ -143,7 +145,7 @@ const TweetComposer = ({
                     <label
                       htmlFor="tweetImage"
                       className="cursor-pointer rounded-full p-2 transition-all hover:bg-blue-900/20 active:scale-90"
-                      title={isUploading ? "Uploading..." : "Add image"}
+                      title={isUploading ? t("composer.uploading") : t("composer.addImage")}
                     >
                       {isUploading ? (
                         <span className="block h-5 w-5 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
@@ -166,7 +168,7 @@ const TweetComposer = ({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        title="Coming soon"
+                        title={t("composer.comingSoon")}
                         disabled
                         className="cursor-not-allowed rounded-full p-2 text-gray-600 opacity-70 hover:bg-transparent"
                       >
@@ -178,7 +180,7 @@ const TweetComposer = ({
                     <div className="hidden items-center space-x-2 sm:flex">
                       <Globe className="h-4 w-4 text-blue-400" />
                       <span className="text-sm font-semibold text-blue-400">
-                        Everyone can reply
+                        {t("composer.everyoneCanReply")}
                       </span>
                     </div>
                     {characterCount > 0 && (
@@ -243,7 +245,7 @@ const TweetComposer = ({
                       {isLoading ? (
                         <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                       ) : (
-                        "Post"
+                        t("composer.post")
                       )}
                     </Button>
                   </div>
@@ -251,20 +253,19 @@ const TweetComposer = ({
 
                 {limitReached && (
                   <div className="mt-3 flex flex-col items-start gap-2 rounded-xl border border-red-800 bg-red-900/20 p-3 text-sm text-red-400 sm:flex-row sm:items-center">
-                    <span>Tweet limit reached for your plan.</span>
+                    <span>{t("composer.limitReached")}</span>
                     <Link
                       href="/pricing"
                       className="font-semibold text-blue-400 hover:underline"
                     >
-                      Upgrade your plan
+                      {t("composer.upgradePlan")}
                     </Link>
                   </div>
                 )}
 
                 {!limitReached && remaining !== Infinity && (
                   <div className="mt-3 text-right text-xs text-gray-500">
-                    {remaining} tweet{remaining !== 1 && "s"} remaining this
-                    month
+                    {t("composer.remaining", { count: remaining })}
                   </div>
                 )}
               </div>

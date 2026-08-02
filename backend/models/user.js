@@ -18,6 +18,11 @@ const UserSchema = mongoose.Schema({
     enum: ["free", "bronze", "silver", "gold"],
     default: "free",
   },
+  language: {
+    type: String,
+    enum: ["en", "es", "hi", "pt", "zh", "fr"],
+    default: "en",
+  },
   planRenewedAt: { type: Date, default: Date.now },
   tweetCount: { type: Number, default: 0 },
   following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

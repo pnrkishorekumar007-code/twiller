@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { useToast } from "@/context/ToastContext";
+import { useTranslation } from "react-i18next";
 
 declare global {
   interface Window {
@@ -88,6 +89,7 @@ const PricingPlans = () => {
   const { user, setUser } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const { t } = useTranslation();
   const [processing, setProcessing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,16 +97,15 @@ const PricingPlans = () => {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
         <Crown className="h-12 w-12 text-yellow-400" />
-        <h1 className="text-2xl font-bold text-white">Log in to upgrade</h1>
+        <h1 className="text-2xl font-bold text-white">{t("pricing.logInToUpgrade")}</h1>
         <p className="max-w-sm text-gray-400">
-          Create an account or sign in to unlock higher tweet limits with a
-          Premium plan.
+          {t("pricing.logInToUpgradeDesc")}
         </p>
         <Button
           className="rounded-full bg-blue-500 px-8 py-3 font-semibold text-white transition-all hover:bg-blue-600 active:scale-[0.98]"
           onClick={() => router.push("/")}
         >
-          Log in / Sign up
+          {t("pricing.logInSignUp")}
         </Button>
       </div>
     );
@@ -124,7 +125,9 @@ const PricingPlans = () => {
         amount,
         currency,
         name: "Twiller",
-        description: `${plan.name} Plan - ${plan.limit}`,
+        description: `${t(`pricing.plans.${plan.id}.name`)} - ${t(
+          `pricing.plans.${plan.id}.limit`
+        )}`,
         order_id: orderId,
         handler: async (response: RazorpayResponse) => {
           try {
@@ -137,14 +140,19 @@ const PricingPlans = () => {
             setUser(updatedUser);
             localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
             setError(null);
-            toast(`You're now on the ${plan.name} plan!`, "success");
+            toast(
+              t("pricing.nowOnPlan", {
+                name: t(`pricing.plans.${plan.id}.name`),
+              }),
+              "success"
+            );
           } catch (verifyErr: unknown) {
             console.error("Payment verification failed:", verifyErr);
             const msg =
               verifyErr instanceof AxiosError &&
               verifyErr.response?.data?.error
                 ? verifyErr.response.data.error
-                : "Payment verification failed. Please contact support.";
+                : t("pricing.paymentVerificationFailed");
             setError(msg);
             toast(msg, "error");
           }
@@ -160,7 +168,7 @@ const PricingPlans = () => {
       const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", (response: RazorpayFailedResponse) => {
         const msg =
-          response.error?.description || "Payment failed. Please try again.";
+          response.error?.description || t("pricing.paymentFailed");
         setError(msg);
         toast(msg, "error");
         setProcessing(null);
@@ -171,7 +179,7 @@ const PricingPlans = () => {
       const msg =
         err instanceof AxiosError && err.response?.data?.error
           ? err.response.data.error
-          : "Failed to start payment. Please try again.";
+          : t("pricing.startFailed");
       setError(msg);
       toast(msg, "error");
       setProcessing(null);
@@ -191,9 +199,9 @@ const PricingPlans = () => {
             <ArrowLeft className="h-5 w-5 text-white" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-white">Upgrade your plan</h1>
+            <h1 className="text-xl font-bold text-white">{t("pricing.title")}</h1>
             <p className="text-sm text-gray-400">
-              Payments are accepted between 10:00 AM and 11:00 AM IST.
+              {t("pricing.paymentWindow")}
             </p>
           </div>
         </div>
@@ -220,7 +228,7 @@ const PricingPlans = () => {
               {plan.highlight && (
                 <div className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-2xl bg-blue-500 px-3 py-1 text-xs font-bold text-white">
                   <Sparkles className="h-3 w-3" />
-                  Most popular
+                  {t("pricing.mostPopular")}
                 </div>
               )}
               <CardContent className="p-6">
@@ -231,27 +239,35 @@ const PricingPlans = () => {
                     ) : (
                       <span className="h-2.5 w-2.5 rounded-full bg-gray-600" />
                     )}
-                    <h3 className="text-lg font-bold">{plan.name}</h3>
+                    <h3 className="text-lg font-bold">
+                      {t(`pricing.plans.${plan.id}.name`)}
+                    </h3>
                   </div>
                   {isCurrent && (
                     <span className="rounded-full border border-blue-500/40 bg-blue-500/20 px-3 py-1 text-xs text-blue-400">
-                      Current
+                      {t("pricing.current")}
                     </span>
                   )}
                 </div>
                 <div className="mb-4">
                   <span className="text-3xl font-bold">
-                    {plan.price === 0 ? "Free" : `₹${plan.price}`}
+                    {plan.price === 0
+                      ? t("pricing.plans.free.name")
+                      : `₹${plan.price}`}
                   </span>
                   {plan.price > 0 && (
-                    <span className="text-gray-400">/month</span>
+                    <span className="text-gray-400">{t("pricing.perMonth")}</span>
                   )}
                 </div>
                 <p className="mb-4 text-sm font-semibold text-blue-400">
-                  {plan.limit}
+                  {t(`pricing.plans.${plan.id}.limit`)}
                 </p>
                 <ul className="mb-6 space-y-2">
-                  {plan.features.map((feature) => (
+                  {(
+                    t(`pricing.plans.${plan.id}.features`, {
+                      returnObjects: true,
+                    }) as string[]
+                  ).map((feature) => (
                     <li
                       key={feature}
                       className="flex items-center gap-2 text-sm text-gray-300"
@@ -276,9 +292,9 @@ const PricingPlans = () => {
                   {processing === plan.id ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   ) : isCurrent ? (
-                    "Current plan"
+                    t("pricing.currentPlan")
                   ) : (
-                    "Upgrade"
+                    t("pricing.upgrade")
                   )}
                 </Button>
               </CardContent>

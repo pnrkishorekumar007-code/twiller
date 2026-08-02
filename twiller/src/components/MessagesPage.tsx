@@ -16,6 +16,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { timeAgo } from "@/lib/time";
+import { useTranslation } from "react-i18next";
 
 interface ConversationUser {
   _id: string;
@@ -42,6 +43,7 @@ interface Conversation {
 export default function MessagesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -124,7 +126,7 @@ export default function MessagesPage() {
       setMessages(convo.messages);
       fetchConversations();
     } catch {
-      toast("Could not open conversation", "error");
+      toast(t("messages.openFailed"), "error");
     } finally {
       setLoadingChat(false);
     }
@@ -153,7 +155,7 @@ export default function MessagesPage() {
       if (!activeId) setActiveId(convo._id);
       fetchConversations();
     } catch {
-      toast("Failed to send message", "error");
+      toast(t("messages.sendFailed"), "error");
     } finally {
       setSending(false);
     }
@@ -216,8 +218,8 @@ export default function MessagesPage() {
           </div>
           <div className="truncate text-sm text-gray-400">
             {last
-              ? `${isOwn(last) ? "You: " : ""}${last.content}`
-              : "No messages yet"}
+              ? `${isOwn(last) ? t("messages.you") : ""}${last.content}`
+              : t("messages.noMessages")}
           </div>
         </div>
       </button>
@@ -261,10 +263,10 @@ export default function MessagesPage() {
         }`}
       >
         <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-          <h1 className="text-xl font-bold text-white">Messages</h1>
+          <h1 className="text-xl font-bold text-white">{t("messages.title")}</h1>
           <button
             onClick={() => setComposerOpen(true)}
-            aria-label="New message"
+            aria-label={t("messages.newMessage")}
             className="rounded-full p-2 text-gray-300 transition-colors hover:bg-gray-900"
           >
             <PenSquare className="h-5 w-5" />
@@ -288,15 +290,15 @@ export default function MessagesPage() {
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-gray-800">
               <Mail className="h-7 w-7 text-gray-500" />
             </div>
-            <p className="mb-1 text-lg font-bold text-white">No messages yet</p>
+            <p className="mb-1 text-lg font-bold text-white">{t("messages.emptyTitle")}</p>
             <p className="mb-4 text-sm text-gray-500">
-              Start a conversation by messaging someone.
+              {t("messages.emptyDesc")}
             </p>
             <button
               onClick={() => setComposerOpen(true)}
               className="rounded-full bg-blue-500 px-5 py-2 font-semibold text-white transition-all hover:bg-blue-600 active:scale-95"
             >
-              New message
+              {t("messages.newMessage")}
             </button>
           </div>
         ) : (
@@ -318,7 +320,7 @@ export default function MessagesPage() {
             <div className="flex items-center gap-3 border-b border-gray-800 px-4 py-3">
               <button
                 onClick={() => setActiveId(null)}
-                aria-label="Back to messages"
+                aria-label={t("messages.back")}
                 className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-900 lg:hidden"
               >
                 <X className="h-5 w-5" />
@@ -340,7 +342,7 @@ export default function MessagesPage() {
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages.length === 0 ? (
                 <p className="py-10 text-center text-sm text-gray-500">
-                  Say hi to @{otherUser.username}
+                  {t("messages.sayHi", { username: otherUser.username })}
                 </p>
               ) : (
                 messages.map(messageBubble)
@@ -358,14 +360,14 @@ export default function MessagesPage() {
                     sendMessage();
                   }
                 }}
-                placeholder="Start a new message"
+                placeholder={t("messages.startNew")}
                 maxLength={500}
                 className="flex-1 rounded-full border border-gray-800 bg-gray-900 px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:border-blue-500"
               />
               <button
                 onClick={sendMessage}
                 disabled={sending || !text.trim()}
-                aria-label="Send message"
+                aria-label={t("messages.send")}
                 className="rounded-full bg-blue-500 p-2.5 text-white transition-all hover:bg-blue-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {sending ? (
@@ -382,10 +384,10 @@ export default function MessagesPage() {
               <Mail className="h-8 w-8 text-gray-500" />
             </div>
             <p className="mb-1 text-2xl font-bold text-white">
-              Select a message
+              {t("messages.selectTitle")}
             </p>
             <p className="max-w-xs text-sm text-gray-500">
-              Choose a conversation from the left to start chatting.
+              {t("messages.selectDesc")}
             </p>
           </div>
         )}
@@ -401,7 +403,7 @@ export default function MessagesPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-              <h2 className="text-lg font-bold text-white">New message</h2>
+              <h2 className="text-lg font-bold text-white">{t("messages.newMessage")}</h2>
               <button
                 onClick={() => setComposerOpen(false)}
                 aria-label="Close"
@@ -417,7 +419,7 @@ export default function MessagesPage() {
                   autoFocus
                   value={composerQuery}
                   onChange={(e) => setComposerQuery(e.target.value)}
-                  placeholder="Search people"
+                  placeholder={t("messages.searchPeople")}
                   className="rounded-full border-gray-800 bg-gray-900 py-2 pl-10 text-white placeholder-gray-500"
                 />
               </div>
@@ -429,7 +431,7 @@ export default function MessagesPage() {
                 </div>
               ) : composerQuery.trim() && composerResults.length === 0 ? (
                 <p className="py-8 text-center text-sm text-gray-500">
-                  No people found
+                  {t("messages.noPeopleFound")}
                 </p>
               ) : (
                 composerResults.map((u) => (
