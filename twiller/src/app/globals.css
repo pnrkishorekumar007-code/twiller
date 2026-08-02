@@ -195,12 +195,14 @@
 
 /* Surfaces */
 .light .bg-black { background-color: #ffffff; }
+/* Sticky headers become translucent white; everything else at partial
+   opacity is an overlay (modal scrims, cover-photo pills) and stays dark. */
 .light .bg-black\/90 { background-color: rgba(255, 255, 255, 0.92); }
-.light .bg-black\/80 { background-color: rgba(255, 255, 255, 0.9); }
-.light .bg-black\/70 { background-color: rgba(255, 255, 255, 0.85); }
-.light .bg-black\/50 { background-color: rgba(255, 255, 255, 0.8); }
-.light .bg-black\/40 { background-color: rgba(255, 255, 255, 0.8); }
-.light .bg-black\/20 { background-color: rgba(255, 255, 255, 0.75); }
+.light .bg-black\/80 { background-color: rgba(15, 20, 25, 0.8); }
+.light .bg-black\/70 { background-color: rgba(15, 20, 25, 0.7); }
+.light .bg-black\/50 { background-color: rgba(15, 20, 25, 0.5); }
+.light .bg-black\/40 { background-color: rgba(15, 20, 25, 0.4); }
+.light .bg-black\/20 { background-color: rgba(15, 20, 25, 0.2); }
 
 .light .bg-gray-950 { background-color: #f7f9f9; }
 .light .bg-gray-950\/60 { background-color: #eef1f3; }
@@ -255,20 +257,17 @@
 .light .shadow-black\/40 { --tw-shadow-color: rgba(15, 20, 25, 0.12); }
 .light .shadow-black\/60 { --tw-shadow-color: rgba(15, 20, 25, 0.2); }
 
-/* White text must survive on brand-colored and dark overlay buttons */
+/* White text must survive on brand-colored buttons and dark overlay pills */
 .light .bg-blue-500.text-white,
 .light .bg-green-500.text-white,
 .light .bg-red-500.text-white,
+.light .bg-black\/20.text-white,
+.light .bg-black\/40.text-white,
 .light .bg-black\/50.text-white,
 .light .bg-black\/70.text-white,
-.light .bg-black\/80.text-white,
-.light .bg-black\/90.text-white {
+.light .bg-black\/80.text-white {
   color: #fff;
 }
-
-/* Overlays that must stay dark even in light mode */
-.light .bg-black\/50.text-white { background-color: rgba(15, 20, 25, 0.5); }
-.light .bg-black\/70.text-white { background-color: rgba(15, 20, 25, 0.7); }
 
 /* Skeleton shimmer in light mode */
 .light .skeleton {
