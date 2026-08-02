@@ -8,6 +8,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { timeAgo } from "@/lib/time";
 import { useTranslation } from "react-i18next";
+import CommentModal from "./CommentModal";
+import type { Tweet } from "./TweetCard";
 
 interface NotificationActor {
   _id: string;
@@ -37,6 +39,7 @@ export default function NotificationsPage() {
   const { t } = useTranslation();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingTweet, setViewingTweet] = useState<Tweet | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,7 +153,21 @@ export default function NotificationsPage() {
           {notifications.map((n) => (
             <div
               key={n._id}
-              className="flex items-start gap-3 p-4 transition-colors hover:bg-gray-900/40"
+              onClick={() => {
+                if (n.tweet?._id) {
+                  setViewingTweet({
+                    _id: n.tweet._id,
+                    content: n.tweet.content,
+                    image: n.tweet.image,
+                    timestamp: n.tweet.timestamp,
+                  });
+                }
+              }}
+              className={`flex items-start gap-3 p-4 transition-colors ${
+                n.tweet?._id
+                  ? "cursor-pointer hover:bg-gray-900/40"
+                  : "hover:bg-gray-900/40"
+              }`}
             >
               <Avatar className="h-10 w-10 shrink-0">
                 <AvatarImage src={n.actor.avatar || ""} alt={n.actor.displayName} />
@@ -173,16 +190,28 @@ export default function NotificationsPage() {
                     ? t("notifications.likedYourTweet")
                     : t("notifications.retweetedYourTweet")}
                 </div>
-                {n.tweet?.content && (
+                {n.tweet?.content ? (
                   <p className="mt-1 truncate text-sm text-gray-500">
                     &quot;{n.tweet.content}&quot;
                   </p>
-                )}
+                ) : n.tweet ? (
+                  <p className="mt-1 truncate text-sm text-gray-500">
+                    {t("tweet.audio")}
+                  </p>
+                ) : null}
               </div>
               {iconFor(n.type)}
             </div>
           ))}
         </div>
+      )}
+
+      {viewingTweet && (
+        <CommentModal
+          tweet={viewingTweet}
+          open={!!viewingTweet}
+          onClose={() => setViewingTweet(null)}
+        />
       )}
     </div>
   );
