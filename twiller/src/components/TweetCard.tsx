@@ -130,7 +130,7 @@ export default function TweetCard({
           </button>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2 mb-2">
+            <div className="mb-2 flex flex-wrap items-center space-x-2">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -169,7 +169,7 @@ export default function TweetCard({
               </span>
             </div>
 
-            <div className="text-white mb-3 leading-relaxed">
+            <div className="mb-3 whitespace-pre-wrap break-words leading-relaxed text-white">
               {tweetstate.content}
             </div>
 

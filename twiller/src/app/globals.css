@@ -227,11 +227,21 @@
 .light .text-gray-600 { color: #8b98a5; }
 .light .text-gray-700 { color: #aeb9c2; }
 
+/* Brand & status colors need darker shades to stay readable on white */
+.light .text-blue-300 { color: #1d9bf0; }
+.light .text-blue-400 { color: #1d9bf0; }
+.light .text-blue-500 { color: #1a8cd8; }
+.light .text-green-400 { color: #17a163; }
+.light .text-red-400 { color: #e0245e; }
+.light .text-red-500 { color: #e0245e; }
+.light .text-yellow-500 { color: #b45309; }
+
 /* Borders & dividers */
 .light .border-gray-800 { border-color: #eff3f4; }
 .light .border-gray-700 { border-color: #d6dde1; }
 .light .border-gray-600 { border-color: #b9c3cb; }
 .light .border-gray-300 { border-color: #cfd9de; }
+.light .border-black { border-color: #ffffff; }
 .light .divide-gray-800 { border-color: #eff3f4; }
 .light .ring-gray-800 { --tw-ring-color: #eff3f4; }
 

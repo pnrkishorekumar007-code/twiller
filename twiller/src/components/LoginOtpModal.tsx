@@ -53,7 +53,7 @@ export default function LoginOtpModal() {
       onClick={() => cancelLoginOtp()}
     >
       <Card
-        className="w-full max-w-md rounded-2xl border-gray-800 bg-black text-white animate-in zoom-in-95 fade-in duration-200"
+        className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border-gray-800 bg-black text-white animate-in zoom-in-95 fade-in duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <CardHeader className="relative pb-6">

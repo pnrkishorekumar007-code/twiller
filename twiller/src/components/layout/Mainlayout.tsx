@@ -126,7 +126,7 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
         <div className="sticky top-0 h-screen w-20 sm:w-24 lg:w-64">
           <Sidebar currentPage={currentPage} onNavigate={navigateTo} />
         </div>
-        <main className="min-h-screen flex-1 max-w-2xl border-x border-gray-800">
+        <main className="min-h-screen min-w-0 flex-1 max-w-2xl border-x border-gray-800">
           {currentPage === "profile" ? (
             viewingUserId && viewingUserId !== user._id ? (
               <UserProfilePage userId={viewingUserId} />

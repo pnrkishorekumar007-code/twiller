@@ -63,19 +63,19 @@ export default function Sidebar({
   ];
 
   return (
-    <div className="flex h-screen flex-col border-r border-gray-800 bg-black">
+    <div className="flex h-screen flex-col bg-black md:border-r md:border-gray-800">
       <div className="px-6 py-5">
         <TwitterLogo size="lg" className="mx-auto text-white md:mx-0" />
       </div>
 
-      <nav className="flex-1 px-2">
+      <nav className="flex-1 overflow-y-auto px-2 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <ul className="space-y-1">
           {navigation.map((item) => (
             <li key={item.name}>
               <button
                 onClick={() => onNavigate?.(item.page)}
                 title={item.name}
-                className={`flex w-full items-center justify-center gap-4 rounded-full px-4 py-3 text-xl transition-colors duration-150 md:justify-start ${
+                className={`flex w-full items-center justify-center gap-4 rounded-full px-4 py-2.5 text-xl transition-colors duration-150 md:justify-start md:py-3 ${
                   item.current
                     ? "bg-white/10 font-bold text-white"
                     : "font-normal text-white hover:bg-gray-900"
@@ -97,7 +97,7 @@ export default function Sidebar({
           ))}
         </ul>
 
-        <div className="mt-8 space-y-3 px-2">
+        <div className="mt-4 space-y-3 px-2 md:mt-8">
           <Link
             href="/pricing"
             title={t("nav.premium")}
