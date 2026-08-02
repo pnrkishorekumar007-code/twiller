@@ -217,6 +217,7 @@
 .light .bg-gray-700 { background-color: #d6dde1; }
 .light .bg-gray-600 { background-color: #c6ced4; }
 .light .bg-gray-200 { background-color: #e7ecef; }
+.light .bg-white\/10 { background-color: rgba(15, 20, 25, 0.07); }
 
 /* Text */
 .light .text-white { color: #0f1419; }

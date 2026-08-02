@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Search, UserPlus, UserCheck, Loader2, SearchX } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Input } from "./ui/input";
@@ -43,7 +43,10 @@ export default function ExplorePage({
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [loadingPeople, setLoadingPeople] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false);
   const [following, setFollowing] = useState<Set<string>>(new Set());
+  const hasMorePostsRef = useRef(true);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -51,17 +54,58 @@ export default function ExplorePage({
 
   const fetchPosts = async (searchQuery: string) => {
     setLoadingPosts(true);
+    hasMorePostsRef.current = true;
     try {
       const res = await axiosInstance.get("/post", {
         params: searchQuery ? { q: searchQuery } : undefined,
       });
-      setPosts(Array.isArray(res.data) ? res.data : []);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setPosts(data);
+      hasMorePostsRef.current = data.length >= 50;
     } catch {
       setPosts([]);
+      hasMorePostsRef.current = false;
     } finally {
       setLoadingPosts(false);
     }
   };
+
+  const loadMorePosts = useCallback(async () => {
+    if (loadingMorePosts || loadingPosts) return;
+    if (!hasMorePostsRef.current) return;
+    const last = posts[posts.length - 1];
+    if (!last?.timestamp) return;
+    setLoadingMorePosts(true);
+    try {
+      const res = await axiosInstance.get("/post", {
+        params: q ? { q, before: last.timestamp } : { before: last.timestamp },
+      });
+      const more = Array.isArray(res.data) ? res.data : [];
+      if (more.length === 0) {
+        hasMorePostsRef.current = false;
+      } else {
+        setPosts((prev) => [...prev, ...more]);
+        hasMorePostsRef.current = more.length >= 50;
+      }
+    } catch {
+      hasMorePostsRef.current = false;
+    } finally {
+      setLoadingMorePosts(false);
+    }
+  }, [loadingMorePosts, loadingPosts, posts, q]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMorePosts();
+      },
+      { rootMargin: "600px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMorePosts]);
 
   const fetchPeople = async (searchQuery: string) => {
     setLoadingPeople(true);
@@ -297,7 +341,19 @@ export default function ExplorePage({
           ) : posts.length === 0 ? (
             emptyState(q ? t("explore.noPostsQuery", { q }) : t("explore.noPosts"))
           ) : (
-            posts.map((tweet) => <TweetCard key={tweet._id} tweet={tweet} />)
+            <>
+              {posts.map((tweet) => (
+                <TweetCard key={tweet._id} tweet={tweet} />
+              ))}
+              <div
+                ref={sentinelRef}
+                className="flex items-center justify-center py-6"
+              >
+                {loadingMorePosts ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                ) : null}
+              </div>
+            </>
           )}
         </div>
       ) : (
