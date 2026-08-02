@@ -19,4 +19,8 @@ const ConversationSchema = mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
+// Conversations are listed per participant and joined by participant pair.
+ConversationSchema.index({ participants: 1, updatedAt: -1 });
+ConversationSchema.index({ participants: 1 });
+
 export default mongoose.model("Conversation", ConversationSchema);

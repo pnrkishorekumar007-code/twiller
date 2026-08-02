@@ -1,21 +1,66 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import React, { useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import LoadingSpinner from "../loading-spinner";
 import Sidebar from "./Sidebar";
 import RightSidebar from "./Rightsidebar";
-import ProfilePage from "../ProfilePage";
-import AudioTweetPage from "../AudioTweetPage";
-import ExplorePage from "../ExplorePage";
-import BookmarksPage from "../BookmarksPage";
-import NotificationsPage from "../NotificationsPage";
-import MessagesPage from "../MessagesPage";
-import UserProfilePage from "../UserProfilePage";
-import LoginActivityPage from "../LoginActivityPage";
-import LanguageSettingsPage from "../LanguageSettingsPage";
-import SettingsPage from "../SettingsPage";
 import { NavProvider } from "@/context/NavContext";
 import { useKeywordNotifications } from "@/hooks/useKeywordNotifications";
+
+// Code-split every secondary page so the initial bundle only contains the
+// feed, composer, and layout. Each page loads on first navigation.
+const ProfilePage = dynamic(() => import("../ProfilePage"), {
+  ssr: false,
+  loading: () => <PageSkeleton />,
+});
+const UserProfilePage = dynamic(() => import("../UserProfilePage"), {
+  ssr: false,
+  loading: () => <PageSkeleton />,
+});
+const AudioTweetPage = dynamic(() => import("../AudioTweetPage"), {
+  ssr: false,
+  loading: () => <PageSkeleton />,
+});
+const ExplorePage = dynamic(() => import("../ExplorePage"), {
+  ssr: false,
+  loading: () => <PageSkeleton />,
+});
+const BookmarksPage = dynamic(() => import("../BookmarksPage"), {
+  ssr: false,
+  loading: () => <PageSkeleton />,
+});
+const NotificationsPage = dynamic(() => import("../NotificationsPage"), {
+  ssr: false,
+  loading: () => <PageSkeleton />,
+});
+const MessagesPage = dynamic(() => import("../MessagesPage"), {
+  ssr: false,
+  loading: () => <PageSkeleton />,
+});
+const LoginActivityPage = dynamic(() => import("../LoginActivityPage"), {
+  ssr: false,
+  loading: () => <PageSkeleton />,
+});
+const LanguageSettingsPage = dynamic(() => import("../LanguageSettingsPage"), {
+  ssr: false,
+  loading: () => <PageSkeleton />,
+});
+const SettingsPage = dynamic(() => import("../SettingsPage"), {
+  ssr: false,
+  loading: () => <PageSkeleton />,
+});
+
+function PageSkeleton() {
+  return (
+    <div className="space-y-3 p-4">
+      <div className="skeleton h-8 w-48 rounded-full" />
+      <div className="skeleton h-24 w-full rounded-2xl" />
+      <div className="skeleton h-24 w-full rounded-2xl" />
+      <div className="skeleton h-24 w-full rounded-2xl" />
+    </div>
+  );
+}
 
 const Mainlayout = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();

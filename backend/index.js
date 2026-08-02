@@ -169,13 +169,14 @@ app.get("/users", async (req, res) => {
 // TRENDS (hashtag counts from recent tweets)
 app.get("/trends", async (req, res) => {
   try {
-    const tweets = await Tweet.find({ content: /#/ })
+    const tweets = await Tweet.find({ content: { $regex: /#/, $ne: null } })
       .select("content timestamp")
       .sort({ timestamp: -1 })
       .limit(200);
     const counts = {};
     for (const t of tweets) {
-      const tags = t.content.match(/#[\w]+/g) || [];
+      // Audio-only tweets have no content; guard against undefined.
+      const tags = (t.content || "").match(/#[\w]+/g) || [];
       for (const tag of tags) {
         const key = tag.toLowerCase();
         counts[key] = (counts[key] || 0) + 1;
@@ -513,7 +514,11 @@ app.get("/notifications", verifyAuth, async (req, res) => {
       .sort({ timestamp: -1 })
       .limit(50)
       .populate("actor", "displayName username avatar")
-      .populate("tweet", "content image timestamp");
+      .populate({
+        path: "tweet",
+        select: "content image timestamp author",
+        populate: { path: "author", select: "displayName username avatar verified" },
+      });
     return res.status(200).send(notifications);
   } catch (error) {
     return res.status(400).send({ error: error.message });

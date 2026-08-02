@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "react-i18next";
 
 const KEYWORDS = ["cricket", "science"];
-const POLL_INTERVAL_MS = 20000;
+const POLL_INTERVAL_MS = 60000;
 
 export function useKeywordNotifications() {
   const { user } = useAuth();

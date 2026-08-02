@@ -11,4 +11,6 @@ const CommentSchema = mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
 });
 
+CommentSchema.index({ tweet: 1, timestamp: 1 });
+
 export default mongoose.model("Comment", CommentSchema);

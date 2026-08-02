@@ -17,4 +17,8 @@ const NotificationSchema = mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
 });
 
+// Notifications are always fetched per recipient, newest first.
+NotificationSchema.index({ recipient: 1, timestamp: -1 });
+NotificationSchema.index({ recipient: 1, read: 1 });
+
 export default mongoose.model("Notification", NotificationSchema);
