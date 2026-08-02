@@ -5,15 +5,18 @@ import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import TweetCard from "./TweetCard";
 import TweetComposer from "./TweetComposer";
 import axiosInstance from "@/lib/axiosInstance";
-import { Bird, UserPlus } from "lucide-react";
+import { Bird, UserPlus, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "react-i18next";
 
 interface Tweet {
   _id: string;
+  timestamp?: string;
 }
 
 type FeedTab = "foryou" | "following";
+
+const PAGE_SIZE = 50;
 
 const Feed = () => {
   const { user } = useAuth();
@@ -23,6 +26,12 @@ const Feed = () => {
   const [followingTweets, setFollowingTweets] = useState<Tweet[]>([]);
   const [loading, setloading] = useState(false);
   const [followingLoading, setFollowingLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const hasMoreRef = useRef<{ foryou: boolean; following: boolean }>({
+    foryou: true,
+    following: true,
+  });
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const cacheRef = useRef<{ foryou: Tweet[] | null; following: Tweet[] | null }>({
     foryou: null,
     following: null,
@@ -32,8 +41,10 @@ const Feed = () => {
     try {
       setloading(true);
       const res = await axiosInstance.get("/post");
-      setTweets(res.data);
-      cacheRef.current.foryou = res.data;
+      const data = res.data;
+      setTweets(data);
+      cacheRef.current.foryou = data;
+      hasMoreRef.current.foryou = data.length >= PAGE_SIZE;
     } catch (error) {
       console.error(error);
     } finally {
@@ -50,12 +61,69 @@ const Feed = () => {
       });
       setFollowingTweets(res.data);
       cacheRef.current.following = res.data;
+      hasMoreRef.current.following = res.data.length >= PAGE_SIZE;
     } catch (error) {
       console.error(error);
     } finally {
       setFollowingLoading(false);
     }
   }, [user?._id]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || loading || followingLoading) return;
+    const isFollowing = activeTab === "following";
+    if (!hasMoreRef.current[isFollowing ? "following" : "foryou"]) return;
+    const list = isFollowing ? followingTweets : tweets;
+    const last = list[list.length - 1];
+    if (!last?.timestamp) return;
+    setLoadingMore(true);
+    try {
+      const res = await axiosInstance.get("/post", {
+        params: isFollowing
+          ? { following: true, userId: user?._id, before: last.timestamp }
+          : { before: last.timestamp },
+      });
+      const more = res.data;
+      if (more.length === 0) {
+        hasMoreRef.current[isFollowing ? "following" : "foryou"] = false;
+      } else {
+        const setter = isFollowing ? setFollowingTweets : setTweets;
+        setter((prev) => {
+          const next = [...prev, ...more];
+          if (isFollowing) cacheRef.current.following = next;
+          else cacheRef.current.foryou = next;
+          return next;
+        });
+        hasMoreRef.current[isFollowing ? "following" : "foryou"] =
+          more.length >= PAGE_SIZE;
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [
+    activeTab,
+    loadingMore,
+    loading,
+    followingLoading,
+    followingTweets,
+    tweets,
+    user?._id,
+  ]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore();
+      },
+      { rootMargin: "600px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   useEffect(() => {
     if (cacheRef.current.foryou) {
@@ -163,9 +231,16 @@ const Feed = () => {
             </div>
           )
         ) : (
-          displayed.map((tweet) => (
-            <TweetCard key={tweet._id} tweet={tweet} />
-          ))
+          <>
+            {displayed.map((tweet) => (
+              <TweetCard key={tweet._id} tweet={tweet} />
+            ))}
+            <div ref={sentinelRef} className="flex items-center justify-center py-6">
+              {loadingMore ? (
+                <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+              ) : null}
+            </div>
+          </>
         )}
       </div>
     </div>

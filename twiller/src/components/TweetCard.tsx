@@ -9,6 +9,7 @@ import {
   Repeat2,
   Share,
   Bookmark,
+  AudioLines,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNav } from "@/context/NavContext";
@@ -29,6 +30,7 @@ export interface Tweet {
   author?: Author | string;
   content?: string;
   image?: string;
+  audio?: { url?: string; durationSeconds?: number };
   likedBy?: string[];
   retweetedBy?: string[];
   comments?: number;
@@ -170,6 +172,40 @@ export default function TweetCard({
             <div className="text-white mb-3 leading-relaxed">
               {tweetstate.content}
             </div>
+
+            {tweetstate.audio?.url && (
+              <div className="mb-3 rounded-2xl border border-gray-800 bg-gray-900/60 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/15">
+                    <AudioLines className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {t("tweet.audio")}
+                    </p>
+                    {tweetstate.audio.durationSeconds ? (
+                      <p className="text-xs text-gray-500">
+                        {tweetstate.audio.durationSeconds >= 60
+                          ? `${Math.floor(
+                              tweetstate.audio.durationSeconds / 60
+                            )}:${(tweetstate.audio.durationSeconds % 60)
+                              .toString()
+                              .padStart(2, "0")}`
+                          : `0:${tweetstate.audio.durationSeconds
+                              .toString()
+                              .padStart(2, "0")}`}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <audio
+                  src={tweetstate.audio.url}
+                  controls
+                  preload="metadata"
+                  className="w-full"
+                />
+              </div>
+            )}
 
             {tweetstate.image && (
               <div className="mb-3 rounded-2xl overflow-hidden">

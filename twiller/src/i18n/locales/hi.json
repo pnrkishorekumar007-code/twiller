@@ -92,7 +92,8 @@
     "unknownUser": "अज्ञात उपयोगकर्ता",
     "image": "ट्वीट छवि",
     "viewProfile": "{{name}} की प्रोफ़ाइल देखें",
-    "shareText": "{{author}}: \"{{content}}\""
+    "shareText": "{{author}}: \"{{content}}\"",
+    "audio": "ऑडियो ट्वीट"
   },
   "profile": {
     "edit": "प्रोफ़ाइल संपादित करें",

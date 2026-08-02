@@ -92,7 +92,8 @@
     "unknownUser": "未知用户",
     "image": "推文图片",
     "viewProfile": "查看 {{name}} 的资料",
-    "shareText": "{{author}}：“{{content}}”"
+    "shareText": "{{author}}：“{{content}}”",
+    "audio": "语音推文"
   },
   "profile": {
     "edit": "编辑个人资料",

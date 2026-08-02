@@ -92,7 +92,8 @@
     "unknownUser": "Usuario desconocido",
     "image": "Imagen del tweet",
     "viewProfile": "Ver el perfil de {{name}}",
-    "shareText": "{{author}}: \"{{content}}\""
+    "shareText": "{{author}}: \"{{content}}\"",
+    "audio": "Tweet de audio"
   },
   "profile": {
     "edit": "Editar perfil",
