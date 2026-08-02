@@ -13,7 +13,11 @@
     "bookmarks": "书签",
     "profile": "个人资料",
     "premium": "Premium",
-    "post": "发帖"
+    "post": "发帖",
+    "audioTweets": "音频推文",
+    "loginActivity": "登录活动",
+    "language": "语言",
+    "settings": "设置"
   },
   "sidebar": {
     "settings": "设置",
@@ -222,7 +226,8 @@
     "remembered": "想起密码了？",
     "signIn": "登录",
     "rateLimit": "此选项每天只能使用一次。",
-    "error": "出问题了，请重试。"
+    "error": "出问题了，请重试。",
+    "copy": "复制密码"
   },
   "loginOtp": {
     "title": "验证你的登录",
@@ -243,7 +248,13 @@
     "emptyDesc": "你推文的点赞、转发和关注会显示在这里。",
     "followedYou": " 关注了你",
     "likedYourTweet": " 点赞了你的推文",
-    "retweetedYourTweet": " 转发了你的推文"
+    "retweetedYourTweet": " 转发了你的推文",
+    "subtitle": "管理您的通知偏好设置",
+    "follow": "新关注者",
+    "likes": "点赞和回复",
+    "likesOn": "点赞通知已启用",
+    "likesOff": "点赞通知已禁用",
+    "toggleFailed": "更新通知偏好设置失败"
   },
   "userProfile": {
     "notFound": "未找到用户",
@@ -314,26 +325,45 @@
     "paymentVerificationFailed": "付款验证失败，请联系客服。",
     "paymentFailed": "付款失败，请重试。",
     "startFailed": "无法开始付款，请重试。",
+    "paymentLocked": "支付当前已锁定",
+    "paymentWindowDesc": "支付在 {{start}} 至 {{end}} 之间接受。请在此窗口期内重试。",
+    "locked": "已锁定",
     "plans": {
       "free": {
         "name": "免费",
         "limit": "每月 1 条推文",
-        "features": ["每月 1 条推文", "基础个人资料", "社区支持"]
+        "features": [
+          "每月 1 条推文",
+          "基础个人资料",
+          "社区支持"
+        ]
       },
       "bronze": {
         "name": "青铜",
         "limit": "每月 3 条推文",
-        "features": ["每月 3 条推文", "优先个人资料徽章", "邮件支持"]
+        "features": [
+          "每月 3 条推文",
+          "优先个人资料徽章",
+          "邮件支持"
+        ]
       },
       "silver": {
         "name": "白银",
         "limit": "每月 5 条推文",
-        "features": ["每月 5 条推文", "青铜套餐的全部内容", "数据分析预览"]
+        "features": [
+          "每月 5 条推文",
+          "青铜套餐的全部内容",
+          "数据分析预览"
+        ]
       },
       "gold": {
         "name": "黄金",
         "limit": "无限推文",
-        "features": ["无限推文", "白银套餐的全部内容", "新功能抢先体验"]
+        "features": [
+          "无限推文",
+          "白银套餐的全部内容",
+          "新功能抢先体验"
+        ]
       }
     }
   },
@@ -385,5 +415,72 @@
     "invalidVerificationId": "无效的验证 ID。",
     "missingPassword": "请输入密码。",
     "authFailed": "身份验证失败，请重试。"
+  },
+  "audio": {
+    "title": "音频推文",
+    "recordTitle": "录制音频",
+    "otpTitle": "验证您的邮箱",
+    "otpDesc": "我们已向您的邮箱发送了6位验证码。请在下方输入以继续。",
+    "otpLabel": "验证码",
+    "uploadTitle": "发布音频推文",
+    "contentLabel": "标题",
+    "contentPlaceholder": "你有什么想法？",
+    "continue": "继续",
+    "verifyOtp": "验证",
+    "back": "返回",
+    "post": "发布音频",
+    "uploading": "上传中...",
+    "uploaded": "音频已发布！",
+    "uploadedDesc": "您的音频推文已成功发布。",
+    "newTweet": "新音频推文",
+    "noAudio": "请先录制音频",
+    "fileTooLarge": "音频文件必须为100 MB或更小",
+    "durationTooLong": "音频必须为5分钟或更短",
+    "micDenied": "麦克风访问被拒绝。请允许麦克风访问。",
+    "otpSent": "验证码已发送到您的邮箱",
+    "otpFailed": "发送验证码失败",
+    "otpVerified": "邮箱已验证！",
+    "otpInvalid": "请输入有效的6位验证码",
+    "tweetWindow": "音频推文只能在{start}至{end} IST之间发布",
+    "uploadSuccess": "音频推文发布成功！",
+    "uploadFailed": "发布音频推文失败",
+    "windowOpen": "音频时段已开放（{{start}}–{{end}} IST）。",
+    "windowClosed": "语音推文于 {{start}} IST 开放，"
+  },
+  "theme": {
+    "toggleToLight": "切换到浅色",
+    "toggleToDark": "切换到深色"
+  },
+  "loginActivity": {
+    "title": "登录活动",
+    "desc": "您账户上的登录记录，包括时间和地点。",
+    "back": "返回",
+    "current": "当前",
+    "otpVerified": "已验证 OTP",
+    "noOtp": "无 OTP",
+    "emptyTitle": "暂无登录记录",
+    "emptyDesc": "登录后，详情会显示在这里。",
+    "loadFailed": "无法加载登录历史。"
+  },
+  "settings": {
+    "title": "设置",
+    "back": "返回",
+    "theme": "主题",
+    "themeDesc": "选择 Twiller 的外观。",
+    "themeDark": "深色（默认）",
+    "themeLight": "浅色",
+    "language": "语言",
+    "languageDesc": "更改 Twiller 的显示语言。",
+    "loginActivity": "登录活动",
+    "loginActivityDesc": "查看您账户的设备和会话。",
+    "open": "打开"
+  },
+  "security": {
+    "title": "安全概览",
+    "desc": "您账户上的近期活动和保护。",
+    "lastLogin": "上次登录",
+    "sessions": "会话",
+    "view": "查看",
+    "noData": "暂无近期活动"
   }
 }

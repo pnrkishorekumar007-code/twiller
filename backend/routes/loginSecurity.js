@@ -24,21 +24,12 @@ function isMobileLoginAllowed() {
 }
 
 router.post("/login-session", verifyAuth, async (req, res) => {
-  const t0 = Date.now();
   try {
     const user = req.authUser;
-    console.log(`[login-session] auth verified at +${Date.now() - t0}ms`);
 
     const info = getDeviceInfo(req);
-    console.log(
-      `[login-session] device info at +${Date.now() - t0}ms`,
-      `${info.browser} / ${info.os} / ${info.device}`
-    );
 
     if (info.device === "mobile" && !isMobileLoginAllowed()) {
-      console.log(
-        `[login-session] blocked mobile outside window at +${Date.now() - t0}ms`
-      );
       return res
         .status(403)
         .json({ blocked: true, reason: "mobile_time_window" });
@@ -55,9 +46,6 @@ router.post("/login-session", verifyAuth, async (req, res) => {
         attempts: 0,
         expiresAt: new Date(Date.now() + OTP_TTL_MS),
       });
-      console.log(
-        `[login-session] otp stored at +${Date.now() - t0}ms`
-      );
 
       // Respond first, send the OTP email in the background so a slow/misconfigured
       // SMTP connection can't hang the login request (and push the client past its
@@ -86,9 +74,6 @@ router.post("/login-session", verifyAuth, async (req, res) => {
       ip: info.ip,
       otpVerified: false,
     });
-    console.log(
-      `[login-session] history logged at +${Date.now() - t0}ms`
-    );
 
     return res.status(200).json({ otpRequired: false, success: true });
   } catch (error) {

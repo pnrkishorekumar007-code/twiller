@@ -13,7 +13,11 @@
     "bookmarks": "Marcadores",
     "profile": "Perfil",
     "premium": "Premium",
-    "post": "Publicar"
+    "post": "Publicar",
+    "audioTweets": "Tweets de Audio",
+    "loginActivity": "Actividad de Inicio de Sesión",
+    "language": "Idioma",
+    "settings": "Configuración"
   },
   "sidebar": {
     "settings": "Configuración",
@@ -222,7 +226,11 @@
     "remembered": "¿Recordaste tu contraseña?",
     "signIn": "Iniciar sesión",
     "rateLimit": "Solo puedes usar esta opción una vez al día.",
-    "error": "Algo salió mal. Vuelve a intentarlo."
+    "error": "Algo salió mal. Vuelve a intentarlo.",
+    "newPassword": "Tu nueva contraseña",
+    "copied": "Contraseña copiada al portapapeles",
+    "copyFailed": "Error al copiar la contraseña",
+    "copy": "Copiar contraseña"
   },
   "loginOtp": {
     "title": "Verifica tu inicio de sesión",
@@ -243,7 +251,13 @@
     "emptyDesc": "Los me gusta, retweets y seguidores de tus tweets aparecerán aquí.",
     "followedYou": " te siguió",
     "likedYourTweet": " dio me gusta a tu tweet",
-    "retweetedYourTweet": " retuiteó tu tweet"
+    "retweetedYourTweet": " retuiteó tu tweet",
+    "subtitle": "Administra tus preferencias de notificaciones",
+    "follow": "Nuevos seguidores",
+    "likes": "Me gusta y respuestas",
+    "likesOn": "Notificaciones de me gusta activadas",
+    "likesOff": "Notificaciones de me gusta desactivadas",
+    "toggleFailed": "Error al actualizar preferencias de notificaciones"
   },
   "userProfile": {
     "notFound": "Usuario no encontrado",
@@ -314,26 +328,45 @@
     "paymentVerificationFailed": "No se pudo verificar el pago. Ponte en contacto con el soporte.",
     "paymentFailed": "El pago falló. Inténtalo de nuevo.",
     "startFailed": "No se pudo iniciar el pago. Inténtalo de nuevo.",
+    "paymentLocked": "Los pagos están actualmente bloqueados",
+    "paymentWindowDesc": "Los pagos se aceptan entre {{start}} y {{end}}. Inténtalo de nuevo durante este horario.",
+    "locked": "Bloqueado",
     "plans": {
       "free": {
         "name": "Gratis",
         "limit": "1 tweet al mes",
-        "features": ["1 tweet al mes", "Perfil básico", "Soporte de la comunidad"]
+        "features": [
+          "1 tweet al mes",
+          "Perfil básico",
+          "Soporte de la comunidad"
+        ]
       },
       "bronze": {
         "name": "Bronce",
         "limit": "3 tweets al mes",
-        "features": ["3 tweets al mes", "Insignia de perfil prioritaria", "Soporte por correo"]
+        "features": [
+          "3 tweets al mes",
+          "Insignia de perfil prioritaria",
+          "Soporte por correo"
+        ]
       },
       "silver": {
         "name": "Plata",
         "limit": "5 tweets al mes",
-        "features": ["5 tweets al mes", "Todo lo de Bronce", "Vista previa de análisis"]
+        "features": [
+          "5 tweets al mes",
+          "Todo lo de Bronce",
+          "Vista previa de análisis"
+        ]
       },
       "gold": {
         "name": "Oro",
         "limit": "Tweets ilimitados",
-        "features": ["Tweets ilimitados", "Todo lo de Plata", "Acceso anticipado a funciones"]
+        "features": [
+          "Tweets ilimitados",
+          "Todo lo de Plata",
+          "Acceso anticipado a funciones"
+        ]
       }
     }
   },
@@ -385,5 +418,72 @@
     "invalidVerificationId": "ID de verificación no válido.",
     "missingPassword": "Introduce una contraseña.",
     "authFailed": "Error de autenticación. Inténtalo de nuevo."
+  },
+  "audio": {
+    "title": "Tweet de Audio",
+    "recordTitle": "Grabar Audio",
+    "otpTitle": "Verifica tu Correo",
+    "otpDesc": "Enviamos un código de 6 dígitos a tu correo. Ingresa el código para continuar.",
+    "otpLabel": "Código de Verificación",
+    "uploadTitle": "Publicar Tweet de Audio",
+    "contentLabel": "Descripción",
+    "contentPlaceholder": "¿Qué tienes en mente?",
+    "continue": "Continuar",
+    "verifyOtp": "Verificar",
+    "back": "Atrás",
+    "post": "Publicar Audio",
+    "uploading": "Subiendo...",
+    "uploaded": "¡Audio Publicado!",
+    "uploadedDesc": "Tu tweet de audio se ha publicado correctamente.",
+    "newTweet": "Nuevo Tweet de Audio",
+    "noAudio": "Primero graba audio",
+    "fileTooLarge": "El archivo de audio debe pesar 100 MB o menos",
+    "durationTooLong": "El audio debe durar 5 minutos o menos",
+    "micDenied": "Acceso al micrófono denegado. Permite el acceso al micrófono.",
+    "otpSent": "Código de verificación enviado a tu correo",
+    "otpFailed": "Error al enviar el código de verificación",
+    "otpVerified": "¡Correo verificado!",
+    "otpInvalid": "Ingresa un código válido de 6 dígitos",
+    "tweetWindow": "Los tweets de audio solo se pueden publicar entre {start} y {end} IST",
+    "uploadSuccess": "¡Tweet de audio publicado!",
+    "uploadFailed": "Error al publicar el tweet de audio",
+    "windowOpen": "La ventana de audio está abierta ({{start}}–{{end}} IST).",
+    "windowClosed": "Los tweets de audio abren a las {{start}} IST en"
+  },
+  "theme": {
+    "toggleToLight": "Cambiar a claro",
+    "toggleToDark": "Cambiar a oscuro"
+  },
+  "loginActivity": {
+    "title": "Actividad de inicio de sesión",
+    "desc": "Inicios de sesión en tu cuenta, incluyendo dónde y cuándo ocurrieron.",
+    "back": "Atrás",
+    "current": "Actual",
+    "otpVerified": "OTP verificado",
+    "noOtp": "Sin OTP",
+    "emptyTitle": "Aún no hay inicios de sesión",
+    "emptyDesc": "Cuando inicies sesión, los detalles aparecerán aquí.",
+    "loadFailed": "No se pudo cargar el historial."
+  },
+  "settings": {
+    "title": "Configuración",
+    "back": "Atrás",
+    "theme": "Tema",
+    "themeDesc": "Elige cómo se ve Twiller para ti.",
+    "themeDark": "Oscuro (predeterminado)",
+    "themeLight": "Claro",
+    "language": "Idioma",
+    "languageDesc": "Cambia el idioma en que se muestra Twiller.",
+    "loginActivity": "Actividad de inicio de sesión",
+    "loginActivityDesc": "Revisa los dispositivos y sesiones de tu cuenta.",
+    "open": "Abrir"
+  },
+  "security": {
+    "title": "Resumen de seguridad",
+    "desc": "Actividad reciente y protecciones en tu cuenta.",
+    "lastLogin": "Último inicio de sesión",
+    "sessions": "sesiones",
+    "view": "Ver",
+    "noData": "Sin actividad reciente"
   }
 }

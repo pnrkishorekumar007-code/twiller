@@ -5,11 +5,15 @@ import LoadingSpinner from "../loading-spinner";
 import Sidebar from "./Sidebar";
 import RightSidebar from "./Rightsidebar";
 import ProfilePage from "../ProfilePage";
+import AudioTweetPage from "../AudioTweetPage";
 import ExplorePage from "../ExplorePage";
 import BookmarksPage from "../BookmarksPage";
 import NotificationsPage from "../NotificationsPage";
 import MessagesPage from "../MessagesPage";
 import UserProfilePage from "../UserProfilePage";
+import LoginActivityPage from "../LoginActivityPage";
+import LanguageSettingsPage from "../LanguageSettingsPage";
+import SettingsPage from "../SettingsPage";
 import { NavProvider } from "@/context/NavContext";
 import { useKeywordNotifications } from "@/hooks/useKeywordNotifications";
 
@@ -69,7 +73,7 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const navValue = { openProfile, search, goBack };
+  const navValue = { openProfile, search, goBack, openPage: navigateTo };
 
   return (
     <NavProvider value={navValue}>
@@ -84,6 +88,8 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
             ) : (
               <ProfilePage />
             )
+          ) : currentPage === "audio" ? (
+            <AudioTweetPage />
           ) : currentPage === "home" ? (
             children
           ) : currentPage === "explore" ? (
@@ -94,6 +100,12 @@ const Mainlayout = ({ children }: { children: React.ReactNode }) => {
             <NotificationsPage />
           ) : currentPage === "messages" ? (
             <MessagesPage />
+          ) : currentPage === "login-activity" ? (
+            <LoginActivityPage />
+          ) : currentPage === "language" ? (
+            <LanguageSettingsPage />
+          ) : currentPage === "settings" ? (
+            <SettingsPage />
           ) : (
             children
           )}

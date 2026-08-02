@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
-import { Crown, Check, Sparkles, ArrowLeft } from "lucide-react";
+import { Crown, Check, Sparkles, ArrowLeft, Lock, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
 import { useToast } from "@/context/ToastContext";
 import { useTranslation } from "react-i18next";
+import { paymentCountdown, isPaymentWindowOpen } from "@/lib/istTime";
 
 declare global {
   interface Window {
@@ -92,6 +93,17 @@ const PricingPlans = () => {
   const { t } = useTranslation();
   const [processing, setProcessing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(() => paymentCountdown());
+
+  useEffect(() => {
+    const id = setInterval(() => setCountdown(paymentCountdown()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const { timeLeft, windowOpen } = {
+    timeLeft: `${countdown.hours}:${countdown.minutes}:${countdown.seconds}`,
+    windowOpen: countdown.open,
+  };
 
   if (!user) {
     return (
@@ -112,6 +124,13 @@ const PricingPlans = () => {
   }
 
   const openCheckout = async (plan: Plan) => {
+    if (!isPaymentWindowOpen()) {
+      setError(t("pricing.paymentWindowDesc", {
+        start: "10:00 AM",
+        end: "11:00 AM IST",
+      }));
+      return;
+    }
     setProcessing(plan.id);
     setError(null);
     try {
@@ -186,6 +205,9 @@ const PricingPlans = () => {
     }
   };
 
+  const isCurrentPlan = user.plan === "free" || !user.plan;
+  const currentPlanName = t(`pricing.plans.${user.plan || "free"}.name`);
+
   return (
     <div className="min-h-screen">
       <div className="sticky top-0 z-10 border-b border-gray-800 bg-black/90 backdrop-blur-md">
@@ -198,14 +220,37 @@ const PricingPlans = () => {
           >
             <ArrowLeft className="h-5 w-5 text-white" />
           </Button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-bold text-white">{t("pricing.title")}</h1>
             <p className="text-sm text-gray-400">
               {t("pricing.paymentWindow")}
             </p>
           </div>
+          <div className="flex items-center gap-2 rounded-full bg-gray-900 px-3 py-1.5 text-sm">
+            <Clock className="h-4 w-4 text-blue-400" />
+            <span className="font-mono text-white">{timeLeft}</span>
+          </div>
         </div>
       </div>
+
+      {!windowOpen && (
+        <div className="mx-4 mt-4 rounded-xl border border-yellow-800 bg-yellow-900/20 p-4">
+          <div className="flex items-start gap-3">
+            <Lock className="mt-0.5 h-5 w-5 shrink-0 text-yellow-400" />
+            <div>
+              <p className="text-sm font-semibold text-yellow-300">
+                {t("pricing.paymentLocked")}
+              </p>
+              <p className="mt-1 text-sm text-yellow-400/80">
+                {t("pricing.paymentWindowDesc", {
+                  start: "10:00 AM",
+                  end: "11:00 AM IST",
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="m-4 rounded-lg border border-red-800 bg-red-900/20 p-3 text-sm text-red-400">
@@ -216,6 +261,7 @@ const PricingPlans = () => {
       <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
         {PLANS.map((plan) => {
           const isCurrent = user.plan === plan.id;
+          const isLocked = !windowOpen && plan.id !== "free";
           return (
             <Card
               key={plan.id}
@@ -223,12 +269,17 @@ const PricingPlans = () => {
                 plan.highlight
                   ? "border-blue-500 bg-gradient-to-b from-blue-500/10 to-transparent ring-1 ring-blue-500/50"
                   : "border-gray-800 bg-gray-900/60 hover:border-gray-700"
-              }`}
+              } ${isLocked && !isCurrent ? "opacity-60" : ""}`}
             >
               {plan.highlight && (
                 <div className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-2xl bg-blue-500 px-3 py-1 text-xs font-bold text-white">
                   <Sparkles className="h-3 w-3" />
                   {t("pricing.mostPopular")}
+                </div>
+              )}
+              {isCurrent && (
+                <div className="absolute right-4 top-4 rounded-full border border-blue-500/40 bg-blue-500/20 px-3 py-1 text-xs text-blue-400">
+                  {t("pricing.current")}
                 </div>
               )}
               <CardContent className="p-6">
@@ -243,11 +294,6 @@ const PricingPlans = () => {
                       {t(`pricing.plans.${plan.id}.name`)}
                     </h3>
                   </div>
-                  {isCurrent && (
-                    <span className="rounded-full border border-blue-500/40 bg-blue-500/20 px-3 py-1 text-xs text-blue-400">
-                      {t("pricing.current")}
-                    </span>
-                  )}
                 </div>
                 <div className="mb-4">
                   <span className="text-3xl font-bold">
@@ -277,26 +323,42 @@ const PricingPlans = () => {
                     </li>
                   ))}
                 </ul>
-                <Button
-                  className={`w-full rounded-full font-semibold transition-all active:scale-[0.98] ${
-                    isCurrent
-                      ? "border-gray-600 bg-transparent text-gray-400"
-                      : "bg-blue-500 text-white hover:bg-blue-600"
-                  }`}
-                  variant="outline"
-                  disabled={
-                    plan.price === 0 || isCurrent || processing !== null
-                  }
-                  onClick={() => openCheckout(plan)}
-                >
-                  {processing === plan.id ? (
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  ) : isCurrent ? (
-                    t("pricing.currentPlan")
-                  ) : (
-                    t("pricing.upgrade")
-                  )}
-                </Button>
+                {isCurrent ? (
+                  <Button
+                    className="w-full rounded-full border-gray-600 bg-transparent font-semibold text-gray-400 transition-all"
+                    variant="outline"
+                    disabled
+                  >
+                    {t("pricing.currentPlan")}
+                  </Button>
+                ) : isLocked ? (
+                  <Button
+                    className="w-full rounded-full bg-gray-700 font-semibold text-gray-400 transition-all cursor-not-allowed"
+                    disabled
+                  >
+                    <Lock className="mr-2 h-4 w-4" />
+                    {t("pricing.locked")}
+                  </Button>
+                ) : (
+                  <Button
+                    className={`w-full rounded-full font-semibold transition-all active:scale-[0.98] ${
+                      isCurrent
+                        ? "border-gray-600 bg-transparent text-gray-400"
+                        : "bg-blue-500 text-white hover:bg-blue-600"
+                    }`}
+                    variant="outline"
+                    disabled={
+                      plan.price === 0 || isCurrent || processing !== null || !windowOpen
+                    }
+                    onClick={() => openCheckout(plan)}
+                  >
+                    {processing === plan.id ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    ) : (
+                      t("pricing.upgrade")
+                    )}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           );

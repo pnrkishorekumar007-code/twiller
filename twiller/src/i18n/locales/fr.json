@@ -13,7 +13,11 @@
     "bookmarks": "Signets",
     "profile": "Profil",
     "premium": "Premium",
-    "post": "Publier"
+    "post": "Publier",
+    "audioTweets": "Tweets Audio",
+    "loginActivity": "Activité de Connexion",
+    "language": "Langue",
+    "settings": "Paramètres"
   },
   "sidebar": {
     "settings": "Paramètres",
@@ -222,7 +226,11 @@
     "remembered": "Vous avez retrouvé votre mot de passe ?",
     "signIn": "Se connecter",
     "rateLimit": "Vous ne pouvez utiliser cette option qu'une fois par jour.",
-    "error": "Une erreur s'est produite. Veuillez réessayer."
+    "error": "Une erreur s'est produite. Veuillez réessayer.",
+    "newPassword": "Votre nouveau mot de passe",
+    "copied": "Mot de passe copié dans le presse-papiers",
+    "copyFailed": "Échec de la copie du mot de passe",
+    "copy": "Copier le mot de passe"
   },
   "loginOtp": {
     "title": "Vérifier votre connexion",
@@ -243,7 +251,13 @@
     "emptyDesc": "Les mentions J'aime, les retweets et les abonnements liés à vos tweets s'afficheront ici.",
     "followedYou": " vous a suivi(e)",
     "likedYourTweet": " a aimé votre tweet",
-    "retweetedYourTweet": " a retweeté votre tweet"
+    "retweetedYourTweet": " a retweeté votre tweet",
+    "subtitle": "Gérez vos préférences de notification",
+    "follow": "Nouveaux abonnés",
+    "likes": "J'aime et réponses",
+    "likesOn": "Notifications de j'aime activées",
+    "likesOff": "Notifications de j'aime désactivées",
+    "toggleFailed": "Échec de la mise à jour des préférences de notification"
   },
   "userProfile": {
     "notFound": "Utilisateur introuvable",
@@ -314,26 +328,45 @@
     "paymentVerificationFailed": "Échec de la vérification du paiement. Veuillez contacter le support.",
     "paymentFailed": "Échec du paiement. Veuillez réessayer.",
     "startFailed": "Impossible de démarrer le paiement. Veuillez réessayer.",
+    "paymentLocked": "Les paiements sont actuellement verrouillés",
+    "paymentWindowDesc": "Les paiements sont acceptés entre {{start}} et {{end}}. Veuillez réessayer pendant cette fenêtre.",
+    "locked": "Verrouillé",
     "plans": {
       "free": {
         "name": "Gratuit",
         "limit": "1 tweet par mois",
-        "features": ["1 tweet par mois", "Profil de base", "Assistance communautaire"]
+        "features": [
+          "1 tweet par mois",
+          "Profil de base",
+          "Assistance communautaire"
+        ]
       },
       "bronze": {
         "name": "Bronze",
         "limit": "3 tweets par mois",
-        "features": ["3 tweets par mois", "Badge de profil prioritaire", "Assistance par e-mail"]
+        "features": [
+          "3 tweets par mois",
+          "Badge de profil prioritaire",
+          "Assistance par e-mail"
+        ]
       },
       "silver": {
         "name": "Argent",
         "limit": "5 tweets par mois",
-        "features": ["5 tweets par mois", "Tout ce qui est inclus dans Bronze", "Aperçu des analyses"]
+        "features": [
+          "5 tweets par mois",
+          "Tout ce qui est inclus dans Bronze",
+          "Aperçu des analyses"
+        ]
       },
       "gold": {
         "name": "Or",
         "limit": "Tweets illimités",
-        "features": ["Tweets illimités", "Tout ce qui est inclus dans Argent", "Accès anticipé aux fonctionnalités"]
+        "features": [
+          "Tweets illimités",
+          "Tout ce qui est inclus dans Argent",
+          "Accès anticipé aux fonctionnalités"
+        ]
       }
     }
   },
@@ -385,5 +418,72 @@
     "invalidVerificationId": "ID de vérification invalide.",
     "missingPassword": "Veuillez saisir un mot de passe.",
     "authFailed": "Échec de l'authentification. Veuillez réessayer."
+  },
+  "audio": {
+    "title": "Tweet Audio",
+    "recordTitle": "Enregistrer Audio",
+    "otpTitle": "Vérifiez votre E-mail",
+    "otpDesc": "Nous avons envoyé un code à 6 chiffres à votre e-mail. Entrez-le ci-dessous pour continuer.",
+    "otpLabel": "Code de Vérification",
+    "uploadTitle": "Publier un Tweet Audio",
+    "contentLabel": "Légende",
+    "contentPlaceholder": "Qu'avez-vous en tête ?",
+    "continue": "Continuer",
+    "verifyOtp": "Vérifier",
+    "back": "Retour",
+    "post": "Publier l'Audio",
+    "uploading": "Envoi en cours...",
+    "uploaded": "Audio Publié !",
+    "uploadedDesc": "Votre tweet audio a été publié avec succès.",
+    "newTweet": "Nouveau Tweet Audio",
+    "noAudio": "Enregistrez d'abord un audio",
+    "fileTooLarge": "Le fichier audio doit faire 100 MB ou moins",
+    "durationTooLong": "L'audio doit durer 5 minutes ou moins",
+    "micDenied": "Accès au micro refusé. Veuillez autoriser l'accès au micro.",
+    "otpSent": "Code de vérification envoyé à votre e-mail",
+    "otpFailed": "Échec de l'envoi du code de vérification",
+    "otpVerified": "E-mail vérifié !",
+    "otpInvalid": "Veuillez entrer un code valide à 6 chiffres",
+    "tweetWindow": "Les tweets audio ne peuvent être publiés qu'entre {start} et {end} IST",
+    "uploadSuccess": "Tweet audio publié avec succès !",
+    "uploadFailed": "Échec de la publication du tweet audio",
+    "windowOpen": "La fenêtre audio est ouverte ({{start}}–{{end}} IST).",
+    "windowClosed": "Les tweets audio ouvrent à {{start}} IST dans"
+  },
+  "theme": {
+    "toggleToLight": "Passer en clair",
+    "toggleToDark": "Passer en sombre"
+  },
+  "loginActivity": {
+    "title": "Activité de connexion",
+    "desc": "Connexions à votre compte, avec le lieu et la date.",
+    "back": "Retour",
+    "current": "Actuelle",
+    "otpVerified": "OTP vérifié",
+    "noOtp": "Sans OTP",
+    "emptyTitle": "Aucune connexion",
+    "emptyDesc": "Lorsque vous vous connectez, les détails apparaîtront ici.",
+    "loadFailed": "Impossible de charger l'historique."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "back": "Retour",
+    "theme": "Thème",
+    "themeDesc": "Choisissez l'apparence de Twiller.",
+    "themeDark": "Sombre (par défaut)",
+    "themeLight": "Clair",
+    "language": "Langue",
+    "languageDesc": "Changez la langue d'affichage de Twiller.",
+    "loginActivity": "Activité de connexion",
+    "loginActivityDesc": "Consultez les appareils et sessions de votre compte.",
+    "open": "Ouvrir"
+  },
+  "security": {
+    "title": "Aperçu de la sécurité",
+    "desc": "Activité récente et protections de votre compte.",
+    "lastLogin": "Dernière connexion",
+    "sessions": "sessions",
+    "view": "Voir",
+    "noData": "Aucune activité récente"
   }
 }

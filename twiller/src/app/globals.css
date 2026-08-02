@@ -178,3 +178,117 @@
   background: rgba(29, 155, 240, 0.4);
   color: #fff;
 }
+
+/* ============================================================
+   Light theme
+   The app is styled with hard-coded dark classes (bg-black,
+   text-white, border-gray-800, …). Instead of rewriting every
+   component, this layer remaps those classes to a light palette
+   when <html class="light"> is set. Higher specificity wins over
+   the Tailwind utilities; exceptions keep white text on brand /
+   overlay surfaces.
+   ============================================================ */
+
+.light {
+  --background: oklch(1 0 0);
+}
+
+/* Surfaces */
+.light .bg-black { background-color: #ffffff; }
+.light .bg-black\/90 { background-color: rgba(255, 255, 255, 0.92); }
+.light .bg-black\/80 { background-color: rgba(255, 255, 255, 0.9); }
+.light .bg-black\/70 { background-color: rgba(255, 255, 255, 0.85); }
+.light .bg-black\/50 { background-color: rgba(255, 255, 255, 0.8); }
+.light .bg-black\/40 { background-color: rgba(255, 255, 255, 0.8); }
+.light .bg-black\/20 { background-color: rgba(255, 255, 255, 0.75); }
+
+.light .bg-gray-950 { background-color: #f7f9f9; }
+.light .bg-gray-950\/60 { background-color: #eef1f3; }
+.light .bg-gray-900 { background-color: #eff3f4; }
+.light .bg-gray-900\/95 { background-color: rgba(255, 255, 255, 0.97); }
+.light .bg-gray-900\/80 { background-color: #f7f9f9; }
+.light .bg-gray-900\/60 { background-color: #eef1f3; }
+.light .bg-gray-900\/50 { background-color: #f7f9f9; }
+.light .bg-gray-900\/40 { background-color: #f7f9f9; }
+.light .bg-gray-800 { background-color: #e7ecef; }
+.light .bg-gray-800\/60 { background-color: #e7ecef; }
+.light .bg-gray-700 { background-color: #d6dde1; }
+.light .bg-gray-600 { background-color: #c6ced4; }
+.light .bg-gray-200 { background-color: #e7ecef; }
+
+/* Text */
+.light .text-white { color: #0f1419; }
+.light .text-gray-300 { color: #38444d; }
+.light .text-gray-400 { color: #536471; }
+.light .text-gray-500 { color: #8b98a5; }
+.light .text-gray-600 { color: #8b98a5; }
+.light .text-gray-700 { color: #aeb9c2; }
+
+/* Borders & dividers */
+.light .border-gray-800 { border-color: #eff3f4; }
+.light .border-gray-700 { border-color: #d6dde1; }
+.light .border-gray-600 { border-color: #b9c3cb; }
+.light .border-gray-300 { border-color: #cfd9de; }
+.light .divide-gray-800 { border-color: #eff3f4; }
+.light .ring-gray-800 { --tw-ring-color: #eff3f4; }
+
+/* Placeholders */
+.light .placeholder-gray-400::placeholder { color: #8b98a5; }
+.light .placeholder-gray-500::placeholder { color: #8b98a5; }
+.light .placeholder-gray-600::placeholder { color: #aeb9c2; }
+
+/* Hover states */
+.light .hover\:bg-gray-900:hover { background-color: rgba(15, 20, 25, 0.08); }
+.light .hover\:bg-gray-900\/40:hover { background-color: rgba(15, 20, 25, 0.04); }
+.light .hover\:bg-gray-900\/50:hover { background-color: rgba(15, 20, 25, 0.05); }
+.light .hover\:bg-gray-900\/60:hover { background-color: rgba(15, 20, 25, 0.06); }
+.light .hover\:bg-gray-950\/60:hover { background-color: rgba(15, 20, 25, 0.06); }
+.light .hover\:bg-gray-800:hover { background-color: rgba(15, 20, 25, 0.08); }
+.light .hover\:bg-gray-800\/60:hover { background-color: rgba(15, 20, 25, 0.06); }
+.light .hover\:bg-gray-200:hover { background-color: #dbe4ea; }
+
+/* Disabled controls */
+.light .disabled\:bg-gray-700:disabled { background-color: #e7ecef; }
+.light .disabled\:text-gray-500:disabled { color: #8b98a5; }
+
+/* Shadows */
+.light .shadow-black\/40 { --tw-shadow-color: rgba(15, 20, 25, 0.12); }
+.light .shadow-black\/60 { --tw-shadow-color: rgba(15, 20, 25, 0.2); }
+
+/* White text must survive on brand-colored and dark overlay buttons */
+.light .bg-blue-500.text-white,
+.light .bg-green-500.text-white,
+.light .bg-red-500.text-white,
+.light .bg-black\/50.text-white,
+.light .bg-black\/70.text-white,
+.light .bg-black\/80.text-white,
+.light .bg-black\/90.text-white {
+  color: #fff;
+}
+
+/* Overlays that must stay dark even in light mode */
+.light .bg-black\/50.text-white { background-color: rgba(15, 20, 25, 0.5); }
+.light .bg-black\/70.text-white { background-color: rgba(15, 20, 25, 0.7); }
+
+/* Skeleton shimmer in light mode */
+.light .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(15, 20, 25, 0.05) 25%,
+    rgba(15, 20, 25, 0.1) 50%,
+    rgba(15, 20, 25, 0.05) 75%
+  );
+  background-size: 200% 100%;
+}
+
+/* Scrollbars & selection */
+.light ::-webkit-scrollbar-thumb {
+  background: rgba(15, 20, 25, 0.2);
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 20, 25, 0.35);
+}
+.light ::selection {
+  background: rgba(29, 155, 240, 0.25);
+  color: #0f1419;
+}

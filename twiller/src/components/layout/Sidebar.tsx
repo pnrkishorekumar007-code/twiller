@@ -14,6 +14,11 @@ import {
   Settings,
   LogOut,
   Crown,
+  AudioLines,
+  Clock,
+  Globe,
+  Sun,
+  Moon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -27,6 +32,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import TwitterLogo from "../Twitterlogo";
 import { useAuth } from "@/context/AuthContext";
 import { useNotificationsUnread } from "@/lib/useNotificationsUnread";
+import { useTheme } from "@/context/ThemeContext";
 import { useTranslation } from "react-i18next";
 
 interface SidebarProps {
@@ -40,6 +46,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const unreadCount = useNotificationsUnread(user?._id);
+  const { theme, toggleTheme } = useTheme();
   const { t } = useTranslation();
 
   const navigation = [
@@ -48,7 +55,11 @@ export default function Sidebar({
     { name: t("nav.notifications"), icon: Bell, current: currentPage === "notifications", page: "notifications", badge: true },
     { name: t("nav.messages"), icon: Mail, current: currentPage === "messages", page: "messages" },
     { name: t("nav.bookmarks"), icon: Bookmark, current: currentPage === "bookmarks", page: "bookmarks" },
+    { name: t("nav.audioTweets"), icon: AudioLines, current: currentPage === "audio", page: "audio" },
     { name: t("nav.profile"), icon: User, current: currentPage === "profile", page: "profile" },
+    { name: t("nav.loginActivity"), icon: Clock, current: currentPage === "login-activity", page: "login-activity" },
+    { name: t("nav.language"), icon: Globe, current: currentPage === "language", page: "language" },
+    { name: t("nav.settings"), icon: Settings, current: currentPage === "settings", page: "settings" },
   ];
 
   return (
@@ -112,6 +123,31 @@ export default function Sidebar({
 
       {user && (
         <div className="border-t border-gray-800 p-4">
+          <button
+            onClick={toggleTheme}
+            title={
+              theme === "dark"
+                ? t("theme.toggleToLight")
+                : t("theme.toggleToDark")
+            }
+            aria-label={
+              theme === "dark"
+                ? t("theme.toggleToLight")
+                : t("theme.toggleToDark")
+            }
+            className="mb-2 flex w-full items-center gap-3 rounded-full p-2 text-left transition-colors hover:bg-gray-900"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-6 w-6 shrink-0 text-gray-300" />
+            ) : (
+              <Moon className="h-6 w-6 shrink-0 text-gray-300" />
+            )}
+            <span className="hidden truncate text-[15px] text-gray-300 md:inline">
+              {theme === "dark"
+                ? t("theme.toggleToLight")
+                : t("theme.toggleToDark")}
+            </span>
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex w-full items-center gap-3 rounded-full p-2 text-left transition-colors hover:bg-gray-900">
@@ -143,7 +179,10 @@ export default function Sidebar({
                 <User className="mr-2 h-4 w-4" />
                 {t("nav.profile")}
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-white hover:bg-gray-900">
+              <DropdownMenuItem
+                className="text-white hover:bg-gray-900"
+                onClick={() => onNavigate?.("settings")}
+              >
                 <Settings className="mr-2 h-4 w-4" />
                 {t("sidebar.settings")}
               </DropdownMenuItem>

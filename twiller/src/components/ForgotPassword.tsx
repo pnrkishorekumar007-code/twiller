@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, KeyRound, Loader2 } from "lucide-react";
+import { ArrowLeft, KeyRound, Loader2, Copy, Check } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Label } from "./ui/label";
@@ -19,6 +19,8 @@ export default function ForgotPassword() {
   const [identifier, setIdentifier] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +28,10 @@ export default function ForgotPassword() {
     if (!value || loading) return;
     setLoading(true);
     try {
-      await axiosInstance.post("/auth/forgot-password", { identifier: value });
+      const res = await axiosInstance.post("/auth/forgot-password", {
+        identifier: value,
+      });
+      setNewPassword(res.data?.newPassword || "");
       setSubmitted(true);
       setIdentifier("");
     } catch (error: unknown) {
@@ -42,6 +47,17 @@ export default function ForgotPassword() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(newPassword);
+      setCopied(true);
+      toast(t("forgotPassword.copied"), "success");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast(t("forgotPassword.copyFailed"), "error");
     }
   };
 
@@ -79,6 +95,32 @@ export default function ForgotPassword() {
               <p className="text-sm leading-relaxed text-gray-300">
                 {t("forgotPassword.success")}
               </p>
+              {newPassword && (
+                <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+                  <Label className="mb-2 block text-sm font-semibold text-gray-400">
+                    {t("forgotPassword.newPassword")}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 break-all rounded-lg bg-black/40 px-3 py-2 text-sm font-mono text-green-400">
+                      {newPassword}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopy}
+                      className="shrink-0 text-gray-400 hover:text-white"
+                      title={t("forgotPassword.copy")}
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
               <Button
                 onClick={() => router.push("/")}
                 className="w-full rounded-full bg-blue-500 py-3 font-semibold text-white transition-all hover:bg-blue-600 active:scale-[0.98]"

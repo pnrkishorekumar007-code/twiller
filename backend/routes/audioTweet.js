@@ -12,6 +12,10 @@ import Tweet from "../models/tweet.js";
 import { sendAudioUploadOtpEmail } from "../utils/mailer.js";
 import { verifyAuth } from "../middleware/verifyAuth.js";
 import getFirebaseAdmin from "../utils/firebaseAdmin.js";
+import {
+  PLAN_LIMITS,
+  resetPlanQuotaIfDue,
+} from "../utils/planLimits.js";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -23,9 +27,6 @@ const MAX_OTP_ATTEMPTS = 5;
 const OTP_GRANT_TTL_MS = 10 * 60 * 1000; // 10 minutes between verify and upload
 const MAX_DURATION_SECONDS = 300; // 5 minutes
 const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100 MB
-
-const PLAN_LIMITS = { free: 1, bronze: 3, silver: 5, gold: Infinity };
-const PLAN_RESET_DAYS = 30;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -183,13 +184,7 @@ router.post(
       const url = `https://storage.googleapis.com/${bucket.name}/${filename}`;
 
       const now = Date.now();
-      if (
-        now - new Date(user.planRenewedAt).getTime() >=
-        PLAN_RESET_DAYS * 24 * 60 * 60 * 1000
-      ) {
-        user.tweetCount = 0;
-        user.planRenewedAt = new Date();
-      }
+      resetPlanQuotaIfDue(user, now);
 
       const limit = PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.free;
       if (user.tweetCount >= limit) {

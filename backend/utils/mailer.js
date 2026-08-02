@@ -180,8 +180,60 @@ export async function sendPasswordResetEmail({ to, username, newPassword }) {
           <div style="margin: 24px 0; padding: 16px; background: #f1f5f9; border-radius: 8px; text-align: center;">
             <code style="font-size: 20px; font-weight: bold; color: #0f172a; letter-spacing: 1px;">${newPassword}</code>
           </div>
-          <p>After signing in, please change your password to something you'll remember (password change is not yet available in the app, but you can request another reset from the forgot-password page).</p>
+          <p>After signing in, please change your password to something you'll remember.</p>
           <p style="color: #6b7280; font-size: 13px;">If you didn't request this, you can safely ignore this email — your account may have been reset by someone who knows your email.</p>
+        </div>
+        <div style="background: #f8fafc; padding: 16px; text-align: center; color: #94a3b8; font-size: 12px;">
+          &copy; ${new Date().getFullYear()} Twiller. All rights reserved.
+        </div>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
+export async function sendSubscriptionDetailsEmail({
+  to,
+  username,
+  plan,
+  amount,
+  paymentId,
+  date,
+}) {
+  const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
+  const mailOptions = {
+    from: `"Twiller" <${process.env.SMTP_USER}>`,
+    to,
+    subject: `Twiller ${planName} Plan - Subscription Details`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+        <div style="background: #0f172a; color: #fff; padding: 24px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px;">Twiller</h1>
+          <p style="margin: 4px 0 0; color: #94a3b8;">Subscription Details</p>
+        </div>
+        <div style="padding: 24px;">
+          <p>Hi <strong>@${username}</strong>,</p>
+          <p>Thank you for upgrading to the <strong>${planName}</strong> plan. Your subscription is now active.</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Plan</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;"><strong>${planName}</strong></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Amount paid</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;"><strong>₹${(amount / 100).toFixed(2)}</strong></td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Payment ID</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${paymentId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Date</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${date}</td>
+            </tr>
+          </table>
+          <p style="color: #6b7280; font-size: 13px;">Questions? Reply to this email and we'll be happy to help.</p>
         </div>
         <div style="background: #f8fafc; padding: 16px; text-align: center; color: #94a3b8; font-size: 12px;">
           &copy; ${new Date().getFullYear()} Twiller. All rights reserved.

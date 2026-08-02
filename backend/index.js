@@ -17,6 +17,10 @@ import getFirebaseAdmin from "./utils/firebaseAdmin.js";
 import { getAuth } from "firebase-admin/auth";
 import { normalizePhone } from "./utils/phone.js";
 import { escapeRegex } from "./utils/escapeRegex.js";
+import {
+  PLAN_LIMITS,
+  resetPlanQuotaIfDue,
+} from "./utils/planLimits.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -329,8 +333,7 @@ app.use("/api", languageRouter);
 
 // Tweet API
 
-const PLAN_LIMITS = { free: 1, bronze: 3, silver: 5, gold: Infinity };
-const PLAN_RESET_DAYS = 30;
+const TWEET_PAGE_SIZE = 50;
 
 // POST
 app.post("/post", verifyAuth, async (req, res) => {
@@ -347,15 +350,10 @@ app.post("/post", verifyAuth, async (req, res) => {
 
     const author = req.authUser;
 
-    const now = Date.now();
-    if (now - new Date(author.planRenewedAt).getTime() >= PLAN_RESET_DAYS * 24 * 60 * 60 * 1000) {
-      author.tweetCount = 0;
-      author.planRenewedAt = new Date();
-      await author.save();
-    }
+    resetPlanQuotaIfDue(author);
+    await author.save();
 
-    const limit = PLAN_LIMITS[author.plan] ?? PLAN_LIMITS.free;
-    if (author.tweetCount >= limit) {
+    if (author.tweetCount >= (PLAN_LIMITS[author.plan] ?? PLAN_LIMITS.free)) {
       return res.status(403).send({
         error: "Tweet limit reached for your plan. Upgrade to post more.",
       });
@@ -372,15 +370,19 @@ app.post("/post", verifyAuth, async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-// get all tweet
+// get all tweet (supports optional `before` cursor for infinite scrolling)
 app.get("/post", async (req, res) => {
   try {
-    const { following, userId, q } = req.query;
+    const { following, userId, q, before } = req.query;
     let query = {};
+    if (before) {
+      query.timestamp = { $lt: new Date(before) };
+    }
     if (following === "true" && userId) {
       const user = await User.findById(userId).select("following");
       const followedIds = user?.following || [];
       query = {
+        ...query,
         author: { $in: [...followedIds, userId] },
       };
     }
@@ -390,7 +392,7 @@ app.get("/post", async (req, res) => {
         content: { $regex: escapeRegex(q.toString().trim()), $options: "i" },
       };
     }
-    const tweet = await Tweet.find(query).sort({ timestamp: -1 }).limit(50).populate("author", "displayName username avatar bio verified");
+    const tweet = await Tweet.find(query).sort({ timestamp: -1 }).limit(TWEET_PAGE_SIZE).populate("author", "displayName username avatar bio verified");
     return res.status(200).send(tweet);
   } catch (error) {
     return res.status(400).send({ error: error.message });

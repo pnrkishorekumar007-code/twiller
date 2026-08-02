@@ -13,7 +13,11 @@
     "bookmarks": "Bookmarks",
     "profile": "Profile",
     "premium": "Premium",
-    "post": "Post"
+    "post": "Post",
+    "audioTweets": "Audio Tweets",
+    "loginActivity": "Login Activity",
+    "language": "Language",
+    "settings": "Settings"
   },
   "sidebar": {
     "settings": "Settings",
@@ -222,7 +226,11 @@
     "remembered": "Remembered your password?",
     "signIn": "Sign in",
     "rateLimit": "You can use this option only one time per day.",
-    "error": "Something went wrong. Please try again."
+    "error": "Something went wrong. Please try again.",
+    "newPassword": "Your new password",
+    "copied": "Password copied to clipboard",
+    "copyFailed": "Failed to copy password",
+    "copy": "Copy password"
   },
   "loginOtp": {
     "title": "Verify your login",
@@ -243,7 +251,13 @@
     "emptyDesc": "Likes, retweets and follows on your tweets will show up here.",
     "followedYou": " followed you",
     "likedYourTweet": " liked your tweet",
-    "retweetedYourTweet": " retweeted your tweet"
+    "retweetedYourTweet": " retweeted your tweet",
+    "subtitle": "Manage your notification preferences",
+    "follow": "New followers",
+    "likes": "Likes and replies",
+    "likesOn": "Likes notifications enabled",
+    "likesOff": "Likes notifications disabled",
+    "toggleFailed": "Failed to update notification preferences"
   },
   "userProfile": {
     "notFound": "User not found",
@@ -314,26 +328,45 @@
     "paymentVerificationFailed": "Payment verification failed. Please contact support.",
     "paymentFailed": "Payment failed. Please try again.",
     "startFailed": "Failed to start payment. Please try again.",
+    "paymentLocked": "Payments are currently locked",
+    "paymentWindowDesc": "Payments are accepted between {{start}} and {{end}}. Please try again during this window.",
+    "locked": "Locked",
     "plans": {
       "free": {
         "name": "Free",
         "limit": "1 tweet per month",
-        "features": ["1 tweet per month", "Basic profile", "Community support"]
+        "features": [
+          "1 tweet per month",
+          "Basic profile",
+          "Community support"
+        ]
       },
       "bronze": {
         "name": "Bronze",
         "limit": "3 tweets per month",
-        "features": ["3 tweets per month", "Priority profile badge", "Email support"]
+        "features": [
+          "3 tweets per month",
+          "Priority profile badge",
+          "Email support"
+        ]
       },
       "silver": {
         "name": "Silver",
         "limit": "5 tweets per month",
-        "features": ["5 tweets per month", "Everything in Bronze", "Analytics preview"]
+        "features": [
+          "5 tweets per month",
+          "Everything in Bronze",
+          "Analytics preview"
+        ]
       },
       "gold": {
         "name": "Gold",
         "limit": "Unlimited tweets",
-        "features": ["Unlimited tweets", "Everything in Silver", "Early access features"]
+        "features": [
+          "Unlimited tweets",
+          "Everything in Silver",
+          "Early access features"
+        ]
       }
     }
   },
@@ -385,5 +418,72 @@
     "invalidVerificationId": "Invalid verification ID.",
     "missingPassword": "Please enter a password.",
     "authFailed": "Authentication failed. Please try again."
+  },
+  "audio": {
+    "title": "Audio Tweet",
+    "recordTitle": "Record Audio",
+    "otpTitle": "Verify Your Email",
+    "otpDesc": "We sent a 6-digit code to your email. Enter it below to continue.",
+    "otpLabel": "Verification Code",
+    "uploadTitle": "Post Audio Tweet",
+    "contentLabel": "Caption",
+    "contentPlaceholder": "What's on your mind?",
+    "continue": "Continue",
+    "verifyOtp": "Verify",
+    "back": "Back",
+    "post": "Post Audio",
+    "uploading": "Uploading...",
+    "uploaded": "Audio Posted!",
+    "uploadedDesc": "Your audio tweet has been posted successfully.",
+    "newTweet": "New Audio Tweet",
+    "noAudio": "Please record audio first",
+    "fileTooLarge": "Audio file must be 100 MB or smaller",
+    "durationTooLong": "Audio must be 5 minutes or shorter",
+    "micDenied": "Microphone access denied. Please allow microphone access.",
+    "otpSent": "Verification code sent to your email",
+    "otpFailed": "Failed to send verification code",
+    "otpVerified": "Email verified!",
+    "otpInvalid": "Please enter a valid 6-digit code",
+    "tweetWindow": "Audio tweets can only be posted between {start} and {end} IST",
+    "uploadSuccess": "Audio tweet posted successfully!",
+    "uploadFailed": "Failed to post audio tweet",
+    "windowOpen": "Audio window is open ({{start}}–{{end}} IST).",
+    "windowClosed": "Audio tweets open at {{start}} IST in"
+  },
+  "theme": {
+    "toggleToLight": "Switch to light",
+    "toggleToDark": "Switch to dark"
+  },
+  "loginActivity": {
+    "title": "Login Activity",
+    "desc": "Logins on your account, including where and when they happened.",
+    "back": "Back",
+    "current": "Current",
+    "otpVerified": "OTP verified",
+    "noOtp": "No OTP",
+    "emptyTitle": "No logins yet",
+    "emptyDesc": "When you log in, the details will show up here.",
+    "loadFailed": "Couldn't load login history."
+  },
+  "settings": {
+    "title": "Settings",
+    "back": "Back",
+    "theme": "Theme",
+    "themeDesc": "Choose how Twiller looks to you.",
+    "themeDark": "Dark (default)",
+    "themeLight": "Light",
+    "language": "Language",
+    "languageDesc": "Change the language Twiller is shown in.",
+    "loginActivity": "Login activity",
+    "loginActivityDesc": "Review the devices and sessions on your account.",
+    "open": "Open"
+  },
+  "security": {
+    "title": "Security overview",
+    "desc": "Recent activity and protections on your account.",
+    "lastLogin": "Last login",
+    "sessions": "sessions",
+    "view": "View",
+    "noData": "No recent activity"
   }
 }

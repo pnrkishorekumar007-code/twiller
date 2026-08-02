@@ -8,6 +8,10 @@ import {
   UserCheck,
   Loader2,
   TrendingUp,
+  Bell,
+  Settings,
+  ShieldCheck,
+  ChevronRight,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -21,6 +25,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNav } from "@/context/NavContext";
 import { useToast } from "@/context/ToastContext";
 import { useTranslation } from "react-i18next";
+import { timeAgo } from "@/lib/time";
 
 interface SuggestedUser {
   _id: string;
@@ -32,15 +37,36 @@ interface SuggestedUser {
   followedBy?: string[];
 }
 
+interface LoginEntry {
+  _id: string;
+  timestamp: string;
+}
+
 export default function RightSidebar() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { toast } = useToast();
-  const { openProfile, search } = useNav();
+  const { openProfile, search, openPage } = useNav();
   const { t } = useTranslation();
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState<Set<string>>(new Set());
   const [trends, setTrends] = useState<{ tag: string; count: number }[]>([]);
+  const [logins, setLogins] = useState<LoginEntry[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    axiosInstance
+      .get("/auth/login-history")
+      .then((res) => {
+        if (!cancelled) {
+          setLogins(Array.isArray(res.data) ? res.data : []);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -278,6 +304,115 @@ export default function RightSidebar() {
                 {t("premium.upgrade")}
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+        <Card className="overflow-hidden rounded-2xl border-gray-800 bg-gray-900/80">
+          <CardContent className="p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <Bell className="h-5 w-5 text-blue-400" />
+              <h3 className="text-lg font-bold text-white">
+                {t("notifications.title")}
+              </h3>
+            </div>
+            <p className="mb-4 text-sm text-gray-400">
+              {t("notifications.subtitle")}
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-300">
+                {t("notifications.follow")}
+              </span>
+              <button
+                role="switch"
+                aria-checked={!!user?.notificationsEnabled}
+                onClick={async () => {
+                  if (!user) return;
+                  const enabled = !user.notificationsEnabled;
+                  if (enabled) {
+                    if (!("Notification" in window)) {
+                      toast(t("profile.notificationUnsupported"), "error");
+                      return;
+                    }
+                    const permission = await Notification.requestPermission();
+                    if (permission !== "granted") {
+                      toast(t("profile.notificationBlocked"), "error");
+                      return;
+                    }
+                  }
+                  try {
+                    await axiosInstance.patch(`/userdata/${user.email}`, {
+                      notificationsEnabled: enabled,
+                    });
+                    const updatedUser = {
+                      ...user,
+                      notificationsEnabled: enabled,
+                    };
+                    setUser(updatedUser);
+                    localStorage.setItem(
+                      "twitter-user",
+                      JSON.stringify(updatedUser)
+                    );
+                    toast(
+                      enabled
+                        ? t("profile.notificationEnabled")
+                        : t("profile.notificationDisabled"),
+                      "success"
+                    );
+                  } catch {
+                    toast(t("profile.notificationToggleFailed"), "error");
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                  user?.notificationsEnabled
+                    ? "bg-blue-500"
+                    : "bg-gray-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                    user?.notificationsEnabled
+                      ? "translate-x-5"
+                      : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden rounded-2xl border-gray-800 bg-gray-900/80">
+          <CardContent className="p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-green-400" />
+              <h3 className="text-lg font-bold text-white">
+                {t("security.title")}
+              </h3>
+            </div>
+            <p className="mb-4 text-sm text-gray-400">{t("security.desc")}</p>
+            <div className="mb-4 flex items-center justify-between rounded-xl bg-gray-950 p-3">
+              <div>
+                <p className="text-xs text-gray-500">{t("security.lastLogin")}</p>
+                <p className="text-sm font-semibold text-white">
+                  {logins.length > 0
+                    ? timeAgo(logins[0].timestamp)
+                    : t("security.noData")}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500">
+                  {t("security.sessions")}
+                </p>
+                <p className="text-sm font-semibold text-white">
+                  {logins.length}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => openPage("login-activity")}
+              className="flex w-full items-center justify-center gap-1 rounded-full border border-gray-700 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-900"
+            >
+              {t("security.view")}
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </CardContent>
         </Card>
       </div>

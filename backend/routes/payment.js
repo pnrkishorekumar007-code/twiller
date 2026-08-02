@@ -6,7 +6,7 @@ import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import User from "../models/user.js";
 import Subscription from "../models/subscription.js";
-import { sendInvoiceEmail } from "../utils/mailer.js";
+import { sendInvoiceEmail, sendSubscriptionDetailsEmail } from "../utils/mailer.js";
 import { verifyAuth } from "../middleware/verifyAuth.js";
 
 dayjs.extend(utc);
@@ -143,21 +143,32 @@ router.post("/verify", verifyAuth, async (req, res) => {
     user.planRenewedAt = new Date();
     await user.save();
 
-    // Payment is complete; send the invoice in the background so a slow SMTP
-    // connection can't delay the verification response.
+    // Payment is complete; send the invoice and subscription details
+    // in the background so a slow SMTP connection can't delay the verification response.
+    const paymentDate = new Date().toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
     sendInvoiceEmail({
       to: user.email,
       username: user.username,
       plan: subscription.plan,
       amount: subscription.amount,
       paymentId: razorpay_payment_id,
-      date: new Date().toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
+      date: paymentDate,
     }).catch((emailErr) => {
       console.error("Invoice email failed:", emailErr);
+    });
+    sendSubscriptionDetailsEmail({
+      to: user.email,
+      username: user.username,
+      plan: subscription.plan,
+      amount: subscription.amount,
+      paymentId: razorpay_payment_id,
+      date: paymentDate,
+    }).catch((emailErr) => {
+      console.error("Subscription details email failed:", emailErr);
     });
 
     return res.status(200).json(user);
