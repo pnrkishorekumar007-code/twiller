@@ -333,7 +333,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           params: { email: firebaseuser.email },
         });
         userData = res.data;
-      } catch {
+      } catch (err) {
+        const status = (err as { response?: { status?: number } })?.response
+          ?.status;
+        if (status !== 404) {
+          throw err;
+        }
         const newuser: Partial<User> = {
           username: firebaseuser.email.split("@")[0],
           displayName: firebaseuser.displayName || "User",

@@ -184,15 +184,15 @@ export default function AudioTweetPage() {
     }
     setOtpLoading(true);
     setOtpError("");
+    setError("");
     try {
       await axiosInstance.post("/audio/request-otp");
       setOtpVerified(false);
       setStep("otp");
       toast(t("audio.otpSent"), "success");
     } catch (err) {
-      setOtpError(
-        (err as Error).message || t("audio.otpFailed")
-      );
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      setError(axiosErr?.response?.data?.error || t("audio.otpFailed"));
     } finally {
       setOtpLoading(false);
     }
@@ -205,6 +205,7 @@ export default function AudioTweetPage() {
     }
     setOtpLoading(true);
     setOtpError("");
+    setError("");
     try {
       await axiosInstance.post("/audio/verify-otp", { otp });
       setOtpVerified(true);

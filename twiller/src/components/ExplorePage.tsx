@@ -49,6 +49,7 @@ export default function ExplorePage({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const activeQueryRef = useRef("");
 
   const q = query.trim();
 
@@ -59,10 +60,12 @@ export default function ExplorePage({
       const res = await axiosInstance.get("/post", {
         params: searchQuery ? { q: searchQuery } : undefined,
       });
+      if (searchQuery !== activeQueryRef.current) return;
       const data = Array.isArray(res.data) ? res.data : [];
       setPosts(data);
       hasMorePostsRef.current = data.length >= 50;
     } catch {
+      if (searchQuery !== activeQueryRef.current) return;
       setPosts([]);
       hasMorePostsRef.current = false;
     } finally {
@@ -80,6 +83,7 @@ export default function ExplorePage({
       const res = await axiosInstance.get("/post", {
         params: q ? { q, before: last.timestamp } : { before: last.timestamp },
       });
+      if (q !== activeQueryRef.current) return;
       const more = Array.isArray(res.data) ? res.data : [];
       if (more.length === 0) {
         hasMorePostsRef.current = false;
@@ -88,7 +92,7 @@ export default function ExplorePage({
         hasMorePostsRef.current = more.length >= 50;
       }
     } catch {
-      hasMorePostsRef.current = false;
+      if (q === activeQueryRef.current) hasMorePostsRef.current = false;
     } finally {
       setLoadingMorePosts(false);
     }
@@ -113,6 +117,7 @@ export default function ExplorePage({
       const res = searchQuery
         ? await axiosInstance.get("/users/search", { params: { q: searchQuery } })
         : await axiosInstance.get("/users", { params: { email: user?.email } });
+      if (searchQuery !== activeQueryRef.current) return;
       const users: SuggestedUser[] = Array.isArray(res.data) ? res.data : [];
       setPeople(users);
       setFollowing(
@@ -123,6 +128,7 @@ export default function ExplorePage({
         )
       );
     } catch {
+      if (searchQuery !== activeQueryRef.current) return;
       setPeople([]);
     } finally {
       setLoadingPeople(false);
@@ -135,6 +141,7 @@ export default function ExplorePage({
 
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
+    activeQueryRef.current = q;
     if (!q) {
       setSearching(false);
       fetchPosts("");
@@ -267,6 +274,8 @@ export default function ExplorePage({
     </div>
   );
 
+  const visiblePeople = people.filter((u) => u._id !== user?._id);
+
   return (
     <div className="min-h-screen">
       <div className="sticky top-0 z-10 border-b border-gray-800 bg-black/90 backdrop-blur-md">
@@ -373,10 +382,10 @@ export default function ExplorePage({
                 </div>
               ))}
             </>
-          ) : people.length === 0 ? (
+          ) : visiblePeople.length === 0 ? (
             emptyState(q ? t("explore.noPeopleQuery", { q }) : t("explore.noPeople"))
           ) : (
-            people.map(renderUser)
+            visiblePeople.map(renderUser)
           )}
         </div>
       )}
