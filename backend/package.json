@@ -24,7 +24,6 @@
     "nodemon": "^3.1.14",
     "razorpay": "^2.9.8",
     "resend": "^6.18.1",
-    "twilio": "^6.0.2",
     "ua-parser-js": "^2.0.10"
   },
   "description": ""

@@ -16,4 +16,9 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Dedicated app + auth for Firebase Phone Auth (language-change SMS OTP).
+// signInWithPhoneNumber signs in a *phone* user; running it on a separate Auth
+// instance keeps the user's normal email/password session on `auth` untouched.
+export const phoneAuth = getAuth(initializeApp(app.options, "phone-verifier"));
 export default app;

@@ -1,11 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  signOut,
+} from "firebase/auth";
+import type { ConfirmationResult } from "firebase/auth";
 import { X, ShieldCheck, Phone } from "lucide-react";
 import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { phoneAuth } from "@/context/firebase";
 import LoadingSpinner from "./loading-spinner";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -17,6 +24,26 @@ interface LanguageOtpModalProps {
   onClose: () => void;
 }
 
+const FIREBASE_ERROR_KEYS: Record<string, string> = {
+  "auth/code-expired": "language.expired",
+  "auth/invalid-verification-code": "language.incorrect",
+  "auth/too-many-requests": "language.tooMany",
+  "auth/quota-exceeded": "language.requestFailed",
+  "auth/captcha-check-failed": "language.requestFailed",
+  "auth/invalid-app-credential": "language.requestFailed",
+  "auth/network-request-failed": "language.requestFailed",
+  "auth/phone-number-not-found": "language.requestFailed",
+  "auth/missing-verification-code": "language.enterCode",
+  "auth/missing-phone-number": "language.requestFailed",
+  "auth/operation-not-allowed": "language.requestFailed",
+  "auth/user-disabled": "language.requestFailed",
+};
+
+function getFirebaseErrorKey(err: unknown): string | null {
+  const code = (err as { code?: string })?.code;
+  return code && FIREBASE_ERROR_KEYS[code] ? FIREBASE_ERROR_KEYS[code] : null;
+}
+
 export default function LanguageOtpModal({
   targetLanguage,
   onClose,
@@ -25,11 +52,38 @@ export default function LanguageOtpModal({
   const { updateLanguage } = useAuth();
   const { toast } = useToast();
 
-  const [channel, setChannel] = useState<"email" | "sms" | null>(null);
+  const [channel, setChannel] = useState<"email" | "phone" | null>(null);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [requesting, setRequesting] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
+  const verifierRef = useRef<RecaptchaVerifier | null>(null);
+
+  const sendPhoneSms = async (e164Phone: string) => {
+    await signOut(phoneAuth).catch(() => {});
+    if (verifierRef.current) {
+      try {
+        verifierRef.current.clear();
+      } catch {
+        /* container already gone */
+      }
+      verifierRef.current = null;
+    }
+    const verifier = new RecaptchaVerifier(
+      phoneAuth,
+      "recaptcha-container",
+      { size: "invisible" }
+    );
+    verifierRef.current = verifier;
+    const confirmation = await signInWithPhoneNumber(
+      phoneAuth,
+      e164Phone,
+      verifier
+    );
+    confirmationRef.current = confirmation;
+  };
 
   const requestOtp = async () => {
     setRequesting(true);
@@ -38,8 +92,19 @@ export default function LanguageOtpModal({
       const res = await axiosInstance.post("/api/language/request-otp", {
         targetLanguage,
       });
-      setChannel(res.data?.channel === "sms" ? "sms" : "email");
+      const nextChannel: "email" | "phone" =
+        res.data?.channel === "phone" ? "phone" : "email";
+      setChannel(nextChannel);
+
+      if (nextChannel === "phone") {
+        await sendPhoneSms(res.data?.phone);
+      }
     } catch (err) {
+      const fbKey = getFirebaseErrorKey(err);
+      if (fbKey) {
+        setError(t(fbKey));
+        return;
+      }
       const code = (err as {
         response?: { data?: { error?: string } };
       })?.response?.data?.error;
@@ -66,6 +131,17 @@ export default function LanguageOtpModal({
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
+  useEffect(() => {
+    return () => {
+      try {
+        verifierRef.current?.clear();
+      } catch {
+        /* unmounting */
+      }
+      signOut(phoneAuth).catch(() => {});
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
@@ -78,28 +154,51 @@ export default function LanguageOtpModal({
     setSubmitting(true);
     setError("");
     try {
-      const res = await axiosInstance.post("/api/language/verify-otp", {
-        otp,
-        targetLanguage,
-      });
-      updateLanguage(res.data?.user?.language ?? targetLanguage);
-      toast(t("language.success"), "success");
-      onClose();
+      if (channel === "phone") {
+        if (!confirmationRef.current) {
+          setError(t("language.requestFailed"));
+          return;
+        }
+        await confirmationRef.current.confirm(otp);
+        const token = await phoneAuth.currentUser?.getIdToken();
+        if (!token) {
+          setError(t("language.requestFailed"));
+          return;
+        }
+        const res = await axiosInstance.post("/api/language/verify-otp", {
+          targetLanguage,
+          firebaseToken: token,
+        });
+        updateLanguage(res.data?.user?.language ?? targetLanguage);
+        toast(t("language.success"), "success");
+        onClose();
+      } else {
+        const res = await axiosInstance.post("/api/language/verify-otp", {
+          otp,
+          targetLanguage,
+        });
+        updateLanguage(res.data?.user?.language ?? targetLanguage);
+        toast(t("language.success"), "success");
+        onClose();
+      }
     } catch (err) {
-      const code = (err as {
-        response?: { data?: { error?: string } };
-      })?.response?.data?.error;
-      const keyMap: Record<string, string> = {
-        invalid: "language.invalid",
-        expired: "language.expired",
-        incorrect: "language.incorrect",
-        tooMany: "language.tooMany",
-      };
-      setError(
-        t(
-          (code && keyMap[code]) || "language.requestFailed"
-        )
-      );
+      const fbKey = getFirebaseErrorKey(err);
+      if (fbKey) {
+        setError(t(fbKey));
+      } else {
+        const code = (err as {
+          response?: { data?: { error?: string } };
+        })?.response?.data?.error;
+        const keyMap: Record<string, string> = {
+          invalid: "language.invalid",
+          expired: "language.expired",
+          incorrect: "language.incorrect",
+          tooMany: "language.tooMany",
+        };
+        setError(
+          t((code && keyMap[code]) || "language.requestFailed")
+        );
+      }
     } finally {
       setSubmitting(false);
     }
@@ -134,6 +233,7 @@ export default function LanguageOtpModal({
         </CardHeader>
 
         <CardContent className="space-y-6">
+          <div id="recaptcha-container" />
           {requesting ? (
             <div className="flex justify-center py-8">
               <LoadingSpinner size="md" />
@@ -141,7 +241,7 @@ export default function LanguageOtpModal({
           ) : error ? (
             <div className="space-y-4">
               <div className="flex items-start space-x-3 rounded-lg border border-red-800 bg-red-900/20 p-3 text-sm text-red-300">
-                {channel === "sms" && error === t("language.noPhone") ? (
+                {channel === "phone" && error === t("language.noPhone") ? (
                   <Phone className="mt-0.5 h-5 w-5 shrink-0" />
                 ) : (
                   <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
@@ -168,7 +268,7 @@ export default function LanguageOtpModal({
               <div className="flex items-start space-x-3 rounded-lg border border-blue-800 bg-blue-900/20 p-3 text-sm text-blue-300">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
                 <p>
-                  {channel === "sms"
+                  {channel === "phone"
                     ? t("language.channelSms")
                     : t("language.channelEmail")}
                 </p>

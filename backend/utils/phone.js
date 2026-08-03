@@ -15,3 +15,14 @@ export function normalizePhone(input) {
   }
   return null;
 }
+
+// Converts a stored Indian number (10 digits, or with 0/91/091 prefix) into the
+// E.164 form Firebase Phone Auth requires (e.g. +919999999999).
+export function toE164(phone) {
+  const digits = String(phone || "").replace(/[^\d]/g, "");
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 11 && digits.startsWith("0")) return `+91${digits.slice(1)}`;
+  if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
+  if (digits.length === 13 && digits.startsWith("091")) return `+91${digits.slice(2)}`;
+  return null;
+}
