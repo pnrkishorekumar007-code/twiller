@@ -55,12 +55,20 @@ export default function TweetCard({
   const [tweetstate, settweetstate] = useState(tweet);
   const [bookmarked, setBookmarked] = useState(!!tweet.bookmarked);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const applyServerTweet = (updated: Tweet) => {
+    settweetstate((prev) => ({
+      ...prev,
+      ...updated,
+      author: prev.author ?? updated.author,
+    }));
+  };
+
   const likeTweet = async (tweetId: string) => {
     try {
       const res = await axiosInstance.post(`/like/${tweetId}`, {
         userId: user?._id,
       });
-      settweetstate(res.data);
+      applyServerTweet(res.data);
     } catch {
       // ignore
     }
@@ -71,7 +79,7 @@ export default function TweetCard({
       const res = await axiosInstance.post(`/retweet/${tweetId}`, {
         userId: user?._id,
       });
-      settweetstate(res.data);
+      applyServerTweet(res.data);
     } catch {
       // ignore
     }

@@ -45,6 +45,28 @@ interface RazorpayInstance {
   open: () => void;
 }
 
+function waitForRazorpaySdk(timeoutMs = 10000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window !== "undefined" && typeof window.Razorpay !== "undefined") {
+      resolve();
+      return;
+    }
+    const deadline = Date.now() + timeoutMs;
+    const poll = () => {
+      if (typeof window.Razorpay !== "undefined") {
+        resolve();
+        return;
+      }
+      if (Date.now() > deadline) {
+        reject(new Error("razorpay_sdk_timeout"));
+        return;
+      }
+      setTimeout(poll, 150);
+    };
+    poll();
+  });
+}
+
 interface Plan {
   id: string;
   name: string;
@@ -134,6 +156,7 @@ const PricingPlans = () => {
     setProcessing(plan.id);
     setError(null);
     try {
+      await waitForRazorpaySdk();
       const res = await axiosInstance.post("/payment/create-order", {
         plan: plan.id,
       });
@@ -198,15 +221,14 @@ const PricingPlans = () => {
       const msg =
         err instanceof AxiosError && err.response?.data?.error
           ? err.response.data.error
-          : t("pricing.startFailed");
+          : err instanceof Error && err.message === "razorpay_sdk_timeout"
+            ? t("pricing.sdkLoadFailed")
+            : t("pricing.startFailed");
       setError(msg);
       toast(msg, "error");
       setProcessing(null);
     }
   };
-
-  const isCurrentPlan = user.plan === "free" || !user.plan;
-  const currentPlanName = t(`pricing.plans.${user.plan || "free"}.name`);
 
   return (
     <div className="min-h-screen">

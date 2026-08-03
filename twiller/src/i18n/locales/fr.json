@@ -227,11 +227,7 @@
     "remembered": "Vous avez retrouvé votre mot de passe ?",
     "signIn": "Se connecter",
     "rateLimit": "Vous ne pouvez utiliser cette option qu'une fois par jour.",
-    "error": "Une erreur s'est produite. Veuillez réessayer.",
-    "newPassword": "Votre nouveau mot de passe",
-    "copied": "Mot de passe copié dans le presse-papiers",
-    "copyFailed": "Échec de la copie du mot de passe",
-    "copy": "Copier le mot de passe"
+    "error": "Une erreur s'est produite. Veuillez réessayer."
   },
   "loginOtp": {
     "title": "Vérifier votre connexion",
@@ -329,6 +325,7 @@
     "paymentVerificationFailed": "Échec de la vérification du paiement. Veuillez contacter le support.",
     "paymentFailed": "Échec du paiement. Veuillez réessayer.",
     "startFailed": "Impossible de démarrer le paiement. Veuillez réessayer.",
+    "sdkLoadFailed": "Impossible de charger la passerelle de paiement. Actualisez la page et réessayez.",
     "paymentLocked": "Les paiements sont actuellement verrouillés",
     "paymentWindowDesc": "Les paiements sont acceptés entre {{start}} et {{end}}. Veuillez réessayer pendant cette fenêtre.",
     "locked": "Verrouillé",

@@ -227,11 +227,7 @@
     "remembered": "Remembered your password?",
     "signIn": "Sign in",
     "rateLimit": "You can use this option only one time per day.",
-    "error": "Something went wrong. Please try again.",
-    "newPassword": "Your new password",
-    "copied": "Password copied to clipboard",
-    "copyFailed": "Failed to copy password",
-    "copy": "Copy password"
+    "error": "Something went wrong. Please try again."
   },
   "loginOtp": {
     "title": "Verify your login",
@@ -329,6 +325,7 @@
     "paymentVerificationFailed": "Payment verification failed. Please contact support.",
     "paymentFailed": "Payment failed. Please try again.",
     "startFailed": "Failed to start payment. Please try again.",
+    "sdkLoadFailed": "Unable to load the payment gateway. Please refresh the page and try again.",
     "paymentLocked": "Payments are currently locked",
     "paymentWindowDesc": "Payments are accepted between {{start}} and {{end}}. Please try again during this window.",
     "locked": "Locked",

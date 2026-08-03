@@ -227,8 +227,7 @@
     "remembered": "想起密码了？",
     "signIn": "登录",
     "rateLimit": "此选项每天只能使用一次。",
-    "error": "出问题了，请重试。",
-    "copy": "复制密码"
+    "error": "出问题了，请重试。"
   },
   "loginOtp": {
     "title": "验证你的登录",
@@ -326,6 +325,7 @@
     "paymentVerificationFailed": "付款验证失败，请联系客服。",
     "paymentFailed": "付款失败，请重试。",
     "startFailed": "无法开始付款，请重试。",
+    "sdkLoadFailed": "无法加载支付网关。请刷新页面后重试。",
     "paymentLocked": "支付当前已锁定",
     "paymentWindowDesc": "支付在 {{start}} 至 {{end}} 之间接受。请在此窗口期内重试。",
     "locked": "已锁定",

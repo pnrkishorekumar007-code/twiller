@@ -2,7 +2,6 @@
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import axiosInstance from "@/lib/axiosInstance";
 import { Button } from "@/components/ui/button";
@@ -55,7 +54,18 @@ export default function AudioTweetPage() {
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  const startTimer = () => {
+    timerRef.current = setInterval(() => {
+      elapsedRef.current += 1;
+      setElapsedSeconds(elapsedRef.current);
+      if (elapsedRef.current >= MAX_DURATION) {
+        stopRecording();
+      }
+    }, 1000);
+  };
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -113,19 +123,12 @@ export default function AudioTweetPage() {
       recorder.start();
       setIsRecording(true);
       setIsPaused(false);
+      elapsedRef.current = 0;
       setElapsedSeconds(0);
       setError("");
 
-      timerRef.current = setInterval(() => {
-        setElapsedSeconds((prev) => {
-          if (prev >= MAX_DURATION) {
-            stopRecording();
-            return MAX_DURATION;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    } catch (err) {
+      startTimer();
+    } catch {
       setError(t("audio.micDenied"));
     }
   };
@@ -145,15 +148,7 @@ export default function AudioTweetPage() {
   const togglePause = () => {
     if (isPaused) {
       mediaRecorderRef.current?.resume();
-      timerRef.current = setInterval(() => {
-        setElapsedSeconds((prev) => {
-          if (prev >= MAX_DURATION) {
-            stopRecording();
-            return MAX_DURATION;
-          }
-          return prev + 1;
-        });
-      }, 1000);
+      startTimer();
       setIsPaused(false);
     } else {
       mediaRecorderRef.current?.pause();
@@ -215,8 +210,9 @@ export default function AudioTweetPage() {
       setOtpVerified(true);
       setStep("upload");
       toast(t("audio.otpVerified"), "success");
-    } catch (err: any) {
-      setOtpError(err?.response?.data?.error || t("audio.otpFailed"));
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      setOtpError(axiosErr?.response?.data?.error || t("audio.otpFailed"));
     } finally {
       setOtpLoading(false);
     }
@@ -254,10 +250,9 @@ export default function AudioTweetPage() {
       setOtp("");
       setOtpVerified(false);
       toast(t("audio.uploadSuccess"), "success");
-    } catch (err: any) {
-      setError(
-        err?.response?.data?.error || t("audio.uploadFailed")
-      );
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      setError(axiosErr?.response?.data?.error || t("audio.uploadFailed"));
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -426,7 +421,7 @@ export default function AudioTweetPage() {
                   {audioUrl && !isRecording && (
                     <div className="w-full space-y-3">
                       <audio
-                        ref={audioRef as any}
+                        ref={audioRef}
                         src={audioUrl}
                         controls
                         className="w-full"
@@ -546,7 +541,7 @@ export default function AudioTweetPage() {
                 {/* Audio Preview */}
                 <div className="mb-4 rounded-lg bg-gray-950 p-4">
                   <audio
-                    ref={audioRef as any}
+                    ref={audioRef}
                     src={audioUrl || undefined}
                     controls
                     className="w-full"
@@ -554,7 +549,7 @@ export default function AudioTweetPage() {
                   <div className="mt-2 flex items-center justify-between text-sm text-gray-400">
                     <span>
                       <FileAudio className="mr-1 inline h-4 w-4" />
-                      {(audioBlob?.size ?? 0 / 1024 / 1024).toFixed(2)} MB
+                      {((audioBlob?.size ?? 0) / 1024 / 1024).toFixed(2)} MB
                     </span>
                     <span>
                       {formatTime(Math.floor(duration))}

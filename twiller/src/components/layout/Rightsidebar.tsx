@@ -9,7 +9,6 @@ import {
   Loader2,
   TrendingUp,
   Bell,
-  Settings,
   ShieldCheck,
   ChevronRight,
 } from "lucide-react";

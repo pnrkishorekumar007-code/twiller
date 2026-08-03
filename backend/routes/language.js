@@ -10,12 +10,13 @@ const router = express.Router();
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
-const SUPPORTED_LANGUAGES = ["en", "es", "hi", "pt", "zh", "fr"];
+const SUPPORTED_LANGUAGES = ["en", "es", "hi", "pt", "ta", "zh", "fr"];
 const LANGUAGE_NAMES = {
   en: "English",
   es: "Español",
   hi: "हिन्दी",
   pt: "Português",
+  ta: "தமிழ்",
   zh: "中文",
   fr: "Français",
 };

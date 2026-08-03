@@ -168,6 +168,16 @@ router.post(
           .json({ error: "Audio must be 5 minutes or shorter." });
       }
 
+      const now = Date.now();
+      resetPlanQuotaIfDue(user, now);
+
+      const limit = PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.free;
+      if (user.tweetCount >= limit) {
+        return res.status(403).send({
+          error: "Tweet limit reached for your plan. Upgrade to post more.",
+        });
+      }
+
       const app = getFirebaseAdmin();
       if (!app) {
         return res.status(500).json({
@@ -182,16 +192,6 @@ router.post(
       await file.save(req.file.buffer, { contentType: req.file.mimetype });
       await file.makePublic();
       const url = `https://storage.googleapis.com/${bucket.name}/${filename}`;
-
-      const now = Date.now();
-      resetPlanQuotaIfDue(user, now);
-
-      const limit = PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.free;
-      if (user.tweetCount >= limit) {
-        return res.status(403).send({
-          error: "Tweet limit reached for your plan. Upgrade to post more.",
-        });
-      }
 
       const content = (req.body.content || "").toString().trim();
       const tweet = new Tweet({

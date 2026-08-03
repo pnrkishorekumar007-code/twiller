@@ -227,11 +227,7 @@
     "remembered": "¿Recordaste tu contraseña?",
     "signIn": "Iniciar sesión",
     "rateLimit": "Solo puedes usar esta opción una vez al día.",
-    "error": "Algo salió mal. Vuelve a intentarlo.",
-    "newPassword": "Tu nueva contraseña",
-    "copied": "Contraseña copiada al portapapeles",
-    "copyFailed": "Error al copiar la contraseña",
-    "copy": "Copiar contraseña"
+    "error": "Algo salió mal. Vuelve a intentarlo."
   },
   "loginOtp": {
     "title": "Verifica tu inicio de sesión",
@@ -329,6 +325,7 @@
     "paymentVerificationFailed": "No se pudo verificar el pago. Ponte en contacto con el soporte.",
     "paymentFailed": "El pago falló. Inténtalo de nuevo.",
     "startFailed": "No se pudo iniciar el pago. Inténtalo de nuevo.",
+    "sdkLoadFailed": "No se pudo cargar la pasarela de pago. Actualiza la página e inténtalo de nuevo.",
     "paymentLocked": "Los pagos están actualmente bloqueados",
     "paymentWindowDesc": "Los pagos se aceptan entre {{start}} y {{end}}. Inténtalo de nuevo durante este horario.",
     "locked": "Bloqueado",

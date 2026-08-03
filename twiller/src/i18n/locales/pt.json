@@ -227,11 +227,7 @@
     "remembered": "Lembrou sua senha?",
     "signIn": "Entrar",
     "rateLimit": "Você só pode usar esta opção uma vez por dia.",
-    "error": "Algo deu errado. Tente novamente.",
-    "newPassword": "Sua nova senha",
-    "copied": "Senha copiada para a área de transferência",
-    "copyFailed": "Falha ao copiar a senha",
-    "copy": "Copiar senha"
+    "error": "Algo deu errado. Tente novamente."
   },
   "loginOtp": {
     "title": "Verifique seu login",
@@ -329,6 +325,7 @@
     "paymentVerificationFailed": "Falha na verificação do pagamento. Entre em contato com o suporte.",
     "paymentFailed": "Falha no pagamento. Tente novamente.",
     "startFailed": "Não foi possível iniciar o pagamento. Tente novamente.",
+    "sdkLoadFailed": "Não foi possível carregar o gateway de pagamento. Atualize a página e tente novamente.",
     "paymentLocked": "Os pagamentos estão atualmente bloqueados",
     "paymentWindowDesc": "Os pagamentos são aceitos entre {{start}} e {{end}}. Tente novamente durante este horário.",
     "locked": "Bloqueado",

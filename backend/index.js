@@ -360,7 +360,7 @@ app.post("/post", verifyAuth, async (req, res) => {
       });
     }
 
-    const tweet = new Tweet({ content, image, author: author._id });
+    const tweet = new Tweet({ content, image: image || null, author: author._id });
     await tweet.save();
 
     author.tweetCount += 1;

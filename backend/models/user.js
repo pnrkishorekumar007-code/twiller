@@ -20,7 +20,7 @@ const UserSchema = mongoose.Schema({
   },
   language: {
     type: String,
-    enum: ["en", "es", "hi", "pt", "zh", "fr"],
+    enum: ["en", "es", "hi", "pt", "ta", "zh", "fr"],
     default: "en",
   },
   planRenewedAt: { type: Date, default: Date.now },

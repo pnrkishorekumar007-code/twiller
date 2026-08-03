@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Globe,
   Moon,
-  Monitor,
   ShieldCheck,
   Sun,
 } from "lucide-react";

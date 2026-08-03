@@ -6,6 +6,7 @@ import es from "./locales/es.json";
 import fr from "./locales/fr.json";
 import hi from "./locales/hi.json";
 import pt from "./locales/pt.json";
+import ta from "./locales/ta.json";
 import zh from "./locales/zh.json";
 
 export const SUPPORTED_LANGUAGES = [
@@ -13,6 +14,7 @@ export const SUPPORTED_LANGUAGES = [
   { code: "es", name: "Español" },
   { code: "hi", name: "हिन्दी" },
   { code: "pt", name: "Português" },
+  { code: "ta", name: "தமிழ்" },
   { code: "zh", name: "中文" },
   { code: "fr", name: "Français" },
 ];
@@ -39,6 +41,7 @@ if (!i18n.isInitialized) {
       fr: { translation: fr },
       hi: { translation: hi },
       pt: { translation: pt },
+      ta: { translation: ta },
       zh: { translation: zh },
     },
     lng: DEFAULT_LANGUAGE,

@@ -2,28 +2,18 @@
 
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Check, Globe, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Globe } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNav } from "@/context/NavContext";
 import { Button } from "./ui/button";
 import { SUPPORTED_LANGUAGES } from "@/i18n/config";
+import LanguageOtpModal from "./LanguageOtpModal";
 
 export default function LanguageSettingsPage() {
   const { user } = useAuth();
   const { goBack } = useNav();
-  const { t, i18n } = useTranslation();
-  const [switchingTo, setSwitchingTo] = useState<string | null>(null);
-
-  const switchLanguage = async (lang: string) => {
-    if (!user || lang === user.language) return;
-    setSwitchingTo(lang);
-    try {
-      await i18n.changeLanguage(lang);
-      window.location.reload();
-    } catch {
-      setSwitchingTo(null);
-    }
-  };
+  const { t } = useTranslation();
+  const [pendingLang, setPendingLang] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen">
@@ -49,14 +39,14 @@ export default function LanguageSettingsPage() {
 
         <div className="space-y-1">
           {SUPPORTED_LANGUAGES.map((lang) => {
-            const isCurrent = !switchingTo && lang.code === user?.language;
-            const isSwitching = switchingTo === lang.code;
+            const isCurrent = lang.code === user?.language;
             return (
               <button
                 key={lang.code}
-                disabled={isSwitching}
-                onClick={() => switchLanguage(lang.code)}
-                className="flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-gray-900/60 disabled:opacity-60"
+                onClick={() => {
+                  if (!isCurrent) setPendingLang(lang.code);
+                }}
+                className="flex w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-gray-900/60"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-800">
@@ -68,16 +58,19 @@ export default function LanguageSettingsPage() {
                     </p>
                   </div>
                 </div>
-                {isSwitching ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
-                ) : isCurrent ? (
-                  <Check className="h-5 w-5 text-blue-400" />
-                ) : null}
+                {isCurrent && <Check className="h-5 w-5 text-blue-400" />}
               </button>
             );
           })}
         </div>
       </div>
+
+      {pendingLang && (
+        <LanguageOtpModal
+          targetLanguage={pendingLang}
+          onClose={() => setPendingLang(null)}
+        />
+      )}
     </div>
   );
 }

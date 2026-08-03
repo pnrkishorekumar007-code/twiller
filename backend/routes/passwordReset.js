@@ -42,7 +42,7 @@ router.post("/forgot-password", async (req, res) => {
 
     if (!user) {
       // Deliberately generic: never reveal whether an account exists.
-    return res.status(200).json({ message: GENERIC_SUCCESS, newPassword });
+    return res.status(200).json({ message: GENERIC_SUCCESS });
     }
 
     if (user.lastPasswordResetRequestAt) {
