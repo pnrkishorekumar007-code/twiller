@@ -155,6 +155,7 @@
     "compressionFailed": "Falha na compressão da imagem",
     "imageLoadFailed": "Falha ao carregar a imagem",
     "uploadTimeout": "O upload da imagem expirou. Tente novamente.",
+    "savedWithoutAvatar": "Perfil salvo, mas a imagem não pôde ser enviada",
     "uploadFailed": "Falha no upload da imagem. Tente novamente."
   },
   "auth": {

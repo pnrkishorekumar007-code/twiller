@@ -155,6 +155,7 @@
     "compressionFailed": "Image compression failed",
     "imageLoadFailed": "Failed to load image",
     "uploadTimeout": "Image upload timed out. Please try again.",
+    "savedWithoutAvatar": "Profile saved, but the image could not be uploaded",
     "uploadFailed": "Image upload failed. Try again."
   },
   "auth": {

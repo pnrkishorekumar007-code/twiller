@@ -2,6 +2,18 @@
   {
     "origin": ["https://twiller-nine.vercel.app", "http://localhost:3000"],
     "method": ["GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Range",
+      "X-Goog-Hash",
+      "X-Firebase-Storage-Version",
+      "X-Goog-Algorithm",
+      "X-Goog-Credential",
+      "X-Goog-Date",
+      "X-Goog-Expires",
+      "X-Goog-SignedHeaders",
+      "X-Goog-Signature"
+    ],
     "maxAgeSeconds": 3600
   }
 ]

@@ -155,6 +155,7 @@
     "compressionFailed": "图片压缩失败",
     "imageLoadFailed": "图片加载失败",
     "uploadTimeout": "图片上传超时，请重试。",
+    "savedWithoutAvatar": "个人资料已保存，但图片上传失败",
     "uploadFailed": "图片上传失败，请重试。"
   },
   "auth": {

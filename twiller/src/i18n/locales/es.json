@@ -155,6 +155,7 @@
     "compressionFailed": "No se pudo comprimir la imagen",
     "imageLoadFailed": "No se pudo cargar la imagen",
     "uploadTimeout": "Se agotó el tiempo de carga de la imagen. Inténtalo de nuevo.",
+    "savedWithoutAvatar": "Perfil guardado, pero no se pudo subir la imagen",
     "uploadFailed": "No se pudo subir la imagen. Inténtalo de nuevo."
   },
   "auth": {

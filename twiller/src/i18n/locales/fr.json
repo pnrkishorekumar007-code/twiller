@@ -155,6 +155,7 @@
     "compressionFailed": "La compression de l'image a échoué",
     "imageLoadFailed": "Échec du chargement de l'image",
     "uploadTimeout": "Le téléversement de l'image a expiré. Veuillez réessayer.",
+    "savedWithoutAvatar": "Profil enregistré, mais l'image n'a pas pu être téléversée",
     "uploadFailed": "Le téléversement de l'image a échoué. Réessayez."
   },
   "auth": {

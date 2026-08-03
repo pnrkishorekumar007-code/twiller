@@ -55,18 +55,32 @@ function uploadImage(
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     let settled = false;
+    const name = task.snapshot.ref.name;
+    console.log(
+      `[upload] start ${name} (${task.snapshot.totalBytes} bytes)`
+    );
+
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
       task.cancel();
+      console.warn(
+        `[upload] timeout for ${name} after ${timeoutMs}ms (stalled/no progress)`
+      );
       reject(new Error("UPLOAD_TIMEOUT"));
     }, timeoutMs);
 
     task.on(
       "state_changed",
       (snapshot) => {
-        const progress = Math.round(
-          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+        const progress =
+          snapshot.totalBytes > 0
+            ? Math.round(
+                (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+              )
+            : 0;
+        console.log(
+          `[upload] progress ${name}: ${snapshot.bytesTransferred}/${snapshot.totalBytes} (${progress}%)`
         );
         onProgress(progress);
       },
@@ -74,8 +88,15 @@ function uploadImage(
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        console.error("Upload Error", err);
-        reject(new Error("UPLOAD_FAILED"));
+        task.cancel();
+        const msg =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : String(err || "Unknown Firebase Storage error");
+        console.error(`[upload] error for ${name}:`, err);
+        // PASS THROUGH the real Firebase error (code + message) so the UI can
+        // show why the upload actually failed instead of a generic message.
+        reject(new Error(msg));
       },
       async () => {
         if (settled) return;
@@ -83,9 +104,13 @@ function uploadImage(
         clearTimeout(timer);
         try {
           const url = await getDownloadURL(task.snapshot.ref);
+          console.log(`[upload] complete ${name} -> ${url}`);
           resolve(url);
         } catch (err) {
-          reject(err);
+          console.error(`[upload] getDownloadURL failed for ${name}:`, err);
+          const msg =
+            err instanceof Error ? err.message : String(err || err);
+          reject(new Error(msg));
         }
       }
     );
@@ -221,20 +246,48 @@ const Editprofile = ({
     setError({});
 
     let resolvedAvatar = originalAvatar;
+    let avatarError: string | null = null;
 
     try {
       if (selectedFile) {
         const compressed = await compressImage(selectedFile, MAX_DIM);
-        const timestamp = Date.now();
-        const storageRef = ref(
-          storage,
-          `users/${user.email.replace(/[^a-zA-Z0-9]/g, "_")}/profile-${timestamp}`
-        );
-        const uploadTask = uploadBytesResumable(storageRef, compressed, {
-          contentType: selectedFile.type,
-        });
+         const filename = `profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+         const storageRef = ref(
+           storage,
+           `users/${user.uid}/${filename}`
+         );
+        const metadata = { contentType: selectedFile.type };
+        const doUpload = () =>
+          uploadBytesResumable(storageRef, compressed, metadata);
 
-        resolvedAvatar = await uploadImage(uploadTask, setUploadProgress);
+        try {
+          resolvedAvatar = await uploadImage(
+            doUpload(),
+            setUploadProgress
+          );
+        } catch (firstErr) {
+          console.warn(
+            "[upload] attempt 1 failed, retrying once:",
+            firstErr
+          );
+          setUploadProgress(0);
+          try {
+            resolvedAvatar = await uploadImage(
+              doUpload(),
+              setUploadProgress
+            );
+          } catch (secondErr) {
+            console.warn(
+              "[upload] attempt 2 failed; saving profile without new avatar:",
+              secondErr
+            );
+            setUploadProgress(0);
+            avatarError =
+              secondErr instanceof Error
+                ? secondErr.message
+                : String(secondErr);
+          }
+        }
       }
 
       const updatedData = {
@@ -279,25 +332,25 @@ const Editprofile = ({
         console.warn("Backend sync failed (Firestore still updated):", syncErr);
       }
 
-      const updatedUser = { ...user, ...updatedData };
-      setUser(updatedUser);
-      localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
+       const updatedUser = { ...user, ...updatedData };
+       setUser(updatedUser);
+       localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
 
-      toast(t("editProfile.updated"), "success");
-      onclose();
-    } catch (err: unknown) {
-      console.error("Profile Update Failed:", err);
-      const msg = err instanceof Error ? err.message : "";
-      const keyMap: Record<string, string> = {
-        COMPRESSION_FAILED: "editProfile.compressionFailed",
-        IMAGE_LOAD_FAILED: "editProfile.imageLoadFailed",
-        UPLOAD_TIMEOUT: "editProfile.uploadTimeout",
-        UPLOAD_FAILED: "editProfile.uploadFailed",
-      };
-      setError({
-        general:
-          msg && keyMap[msg] ? t(keyMap[msg]) : t("editProfile.failed"),
-      });
+       if (avatarError) {
+         toast(
+           `${t("editProfile.savedWithoutAvatar")} — ${avatarError}`,
+           "error"
+         );
+       } else {
+         toast(t("editProfile.updated"), "success");
+       }
+       onclose();
+     } catch (err: unknown) {
+       console.error("Profile Update Failed:", err);
+       const msg = err instanceof Error ? err.message : "";
+       setError({
+         general: msg || t("editProfile.failed"),
+       });
     } finally {
       setSaving(false);
       setUploadProgress(0);
