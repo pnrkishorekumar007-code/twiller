@@ -248,7 +248,9 @@ const Editprofile = ({
 
       const uid = auth.currentUser?.uid;
       if (uid) {
-        await setDoc(
+        // Firestore is a best-effort mirror — never await it (no timeout), or
+        // a stalled write would leave the Save spinner spinning forever.
+        setDoc(
           doc(db, "users", uid),
           {
             photoURL: resolvedAvatar,
@@ -261,7 +263,12 @@ const Editprofile = ({
             updatedAt: serverTimestamp(),
           },
           { merge: true }
-        );
+        ).catch((firestoreErr: unknown) => {
+          console.warn(
+            "Firestore sync failed (Mongo still updated):",
+            firestoreErr
+          );
+        });
       } else {
         console.warn("No Firebase uid found; skipping Firestore update");
       }
