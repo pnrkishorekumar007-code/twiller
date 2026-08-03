@@ -254,7 +254,7 @@ const Editprofile = ({
          const filename = `profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
          const storageRef = ref(
            storage,
-           `users/${user.uid}/${filename}`
+           `users/${auth.currentUser?.uid}/${filename}`
          );
         const metadata = { contentType: selectedFile.type };
         const doUpload = () =>
