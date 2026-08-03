@@ -23,6 +23,9 @@ function getFirebaseAdmin() {
     const cert = admin.credential?.cert ?? admin.cert;
     firebaseApp = admin.initializeApp({
       credential: cert(serviceAccount),
+      // Must match src/context/firebase.tsx's storageBucket exactly so
+      // getStorage(app).bucket() resolves the same bucket the client uses.
+      storageBucket: "twiller-project.firebasestorage.app",
     });
   } catch (error) {
     console.error(
