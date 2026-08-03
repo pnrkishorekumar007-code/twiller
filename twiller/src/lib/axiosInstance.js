@@ -3,9 +3,6 @@ import { auth } from "@/context/firebase";
 
 const axiosInstance = axios.create({
   baseURL: process.env.BACKEND_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
   timeout: 90000,
 });
 
@@ -19,6 +16,14 @@ function withTimeout(promise, ms, label) {
 }
 
 axiosInstance.interceptors.request.use(async (config) => {
+  // Only force JSON when the payload isn't FormData — for FormData, let the
+  // browser/axios set "multipart/form-data; boundary=..." automatically.
+  // Setting Content-Type manually for FormData strips the boundary and
+  // breaks multer/any multipart parser on the receiving end.
+  if (!(config.data instanceof FormData)) {
+    config.headers["Content-Type"] = "application/json";
+  }
+
   const user = auth.currentUser;
   if (user) {
     try {
