@@ -190,8 +190,15 @@ router.post(
       const filename = `audio-tweets/${user._id}-${Date.now()}.webm`;
       const file = bucket.file(filename);
       await file.save(req.file.buffer, { contentType: req.file.mimetype });
-      await file.makePublic();
-      const url = `https://storage.googleapis.com/${bucket.name}/${filename}`;
+
+      // makePublic() relies on the legacy per-object ACL system, which is
+      // disabled on buckets with uniform bucket-level access (the default for
+      // newer Firebase Storage buckets) — it throws there. Signed URLs don't
+      // depend on ACLs, so use one instead. Effectively permanent for this app.
+      const [url] = await file.getSignedUrl({
+        action: "read",
+        expires: "01-01-2100",
+      });
 
       const content = (req.body.content || "").toString().trim();
       const tweet = new Tweet({
