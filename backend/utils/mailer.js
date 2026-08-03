@@ -1,20 +1,11 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 const PLAN_LIMITS = { free: 1, bronze: 3, silver: 5, gold: "Unlimited" };
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: Number(process.env.SMTP_PORT) === 465,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  family: 4,
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
+// Dev/test sender. Swap to a verified-domain sender ("Twiller <noreply@yourdomain.com>")
+// once a domain is verified in Resend.
+const FROM_ADDRESS = "Twiller <onboarding@resend.dev>";
 
 export async function sendInvoiceEmail({
   to,
@@ -27,8 +18,8 @@ export async function sendInvoiceEmail({
   const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
   const tweetLimit = PLAN_LIMITS[plan];
 
-  const mailOptions = {
-    from: `"Twiller" <${process.env.SMTP_USER}>`,
+  await resend.emails.send({
+    from: FROM_ADDRESS,
     to,
     subject: `Twiller ${planName} Plan Invoice`,
     html: `
@@ -69,14 +60,12 @@ export async function sendInvoiceEmail({
         </div>
       </div>
     `,
-  };
-
-  await transporter.sendMail(mailOptions);
+  });
 }
 
 export async function sendLoginOtpEmail({ to, username, otp }) {
-  const mailOptions = {
-    from: `"Twiller" <${process.env.SMTP_USER}>`,
+  await resend.emails.send({
+    from: FROM_ADDRESS,
     to,
     subject: "Twiller Login Verification Code",
     html: `
@@ -99,14 +88,12 @@ export async function sendLoginOtpEmail({ to, username, otp }) {
         </div>
       </div>
     `,
-  };
-
-  await transporter.sendMail(mailOptions);
+  });
 }
 
 export async function sendLanguageOtpEmail({ to, username, otp, targetLanguage }) {
-  const mailOptions = {
-    from: `"Twiller" <${process.env.SMTP_USER}>`,
+  await resend.emails.send({
+    from: FROM_ADDRESS,
     to,
     subject: "Twiller Language Change Verification",
     html: `
@@ -129,14 +116,12 @@ export async function sendLanguageOtpEmail({ to, username, otp, targetLanguage }
         </div>
       </div>
     `,
-  };
-
-  await transporter.sendMail(mailOptions);
+  });
 }
 
 export async function sendAudioUploadOtpEmail({ to, username, otp }) {
-  const mailOptions = {
-    from: `"Twiller" <${process.env.SMTP_USER}>`,
+  await resend.emails.send({
+    from: FROM_ADDRESS,
     to,
     subject: "Twiller Audio Tweet Verification",
     html: `
@@ -159,14 +144,12 @@ export async function sendAudioUploadOtpEmail({ to, username, otp }) {
         </div>
       </div>
     `,
-  };
-
-  await transporter.sendMail(mailOptions);
+  });
 }
 
 export async function sendPasswordResetEmail({ to, username, newPassword }) {
-  const mailOptions = {
-    from: `"Twiller" <${process.env.SMTP_USER}>`,
+  await resend.emails.send({
+    from: FROM_ADDRESS,
     to,
     subject: "Twiller Password Reset",
     html: `
@@ -189,9 +172,7 @@ export async function sendPasswordResetEmail({ to, username, newPassword }) {
         </div>
       </div>
     `,
-  };
-
-  await transporter.sendMail(mailOptions);
+  });
 }
 
 export async function sendSubscriptionDetailsEmail({
@@ -203,8 +184,8 @@ export async function sendSubscriptionDetailsEmail({
   date,
 }) {
   const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
-  const mailOptions = {
-    from: `"Twiller" <${process.env.SMTP_USER}>`,
+  await resend.emails.send({
+    from: FROM_ADDRESS,
     to,
     subject: `Twiller ${planName} Plan - Subscription Details`,
     html: `
@@ -241,7 +222,5 @@ export async function sendSubscriptionDetailsEmail({
         </div>
       </div>
     `,
-  };
-
-  await transporter.sendMail(mailOptions);
+  });
 }
