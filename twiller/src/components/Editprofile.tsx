@@ -4,7 +4,7 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { Camera, LinkIcon, MapPin, X } from "lucide-react";
+import { Camera, LinkIcon, MapPin, Phone, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
@@ -109,6 +109,7 @@ const Editprofile = ({
     bio: "",
     location: "",
     website: "",
+    phone: "",
     avatar: "",
   });
   const [originalAvatar, setOriginalAvatar] = useState("");
@@ -134,6 +135,7 @@ const Editprofile = ({
         bio: user.bio || "",
         location: user.location || "",
         website: user.website || "",
+        phone: user.phone || "",
         avatar: user.avatar || "",
       });
       setOriginalAvatar(user.avatar || "");
@@ -163,6 +165,13 @@ const Editprofile = ({
     }
     if (formData.location && formData.location.length > 30) {
       newErrors.location = t("editProfile.locationTooLong");
+    }
+    const phoneDigits = formData.phone.replace(/\D/g, "");
+    if (
+      formData.phone.trim() &&
+      (phoneDigits.length < 10 || phoneDigits.length > 13)
+    ) {
+      newErrors.phone = t("auth.phoneInvalid");
     }
     setError(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -233,6 +242,7 @@ const Editprofile = ({
         bio: formData.bio,
         location: formData.location,
         website: formData.website,
+        phone: formData.phone.trim(),
         avatar: resolvedAvatar,
       };
 
@@ -247,6 +257,7 @@ const Editprofile = ({
             bio: formData.bio,
             location: formData.location,
             website: formData.website,
+            phone: formData.phone.trim() || null,
             updatedAt: serverTimestamp(),
           },
           { merge: true }
@@ -423,6 +434,31 @@ const Editprofile = ({
                   <p className="text-gray-400 ml-auto">
                     {formData.displayName.length}/50
                   </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-white">
+                  {t("auth.phone")}{" "}
+                  <span className="text-gray-500">{t("auth.phoneOptional")}</span>
+                </Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      handleInputChange("phone", e.target.value)
+                    }
+                    className="pl-10 bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
+                    placeholder={t("auth.phonePlaceholder")}
+                    maxLength={15}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="flex justify-between text-sm">
+                  {error.phone && <p className="text-red-400">{error.phone}</p>}
                 </div>
               </div>
 

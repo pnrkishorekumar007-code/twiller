@@ -442,7 +442,7 @@
     "otpFailed": "发送验证码失败",
     "otpVerified": "邮箱已验证！",
     "otpInvalid": "请输入有效的6位验证码",
-    "tweetWindow": "音频推文只能在{start}至{end} IST之间发布",
+    "tweetWindow": "音频推文只能在{{start}}至{{end}} IST之间发布",
     "uploadSuccess": "音频推文发布成功！",
     "uploadFailed": "发布音频推文失败",
     "windowOpen": "音频时段已开放（{{start}}–{{end}} IST）。",

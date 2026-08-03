@@ -442,7 +442,7 @@
     "otpFailed": "Failed to send verification code",
     "otpVerified": "Email verified!",
     "otpInvalid": "Please enter a valid 6-digit code",
-    "tweetWindow": "Audio tweets can only be posted between {start} and {end} IST",
+    "tweetWindow": "Audio tweets can only be posted between {{start}} and {{end}} IST",
     "uploadSuccess": "Audio tweet posted successfully!",
     "uploadFailed": "Failed to post audio tweet",
     "windowOpen": "Audio window is open ({{start}}–{{end}} IST).",

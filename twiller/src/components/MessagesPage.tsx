@@ -61,6 +61,8 @@ export default function MessagesPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const composerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const composerQueryRef = useRef("");
+  const pollEpochRef = useRef(0);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -81,10 +83,12 @@ export default function MessagesPage() {
 
   const refreshMessages = useCallback(async () => {
     if (!activeId || !otherUser?._id) return;
+    const epoch = pollEpochRef.current;
     try {
       const res = await axiosInstance.get("/conversation", {
         params: { userId: user?._id, otherId: otherUser._id },
       });
+      if (pollEpochRef.current !== epoch) return;
       const convo: Conversation = res.data;
       if (!convo || convo._id !== activeId) return;
       setMessages(convo.messages);
@@ -103,6 +107,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (!activeId) return;
+    pollEpochRef.current += 1;
     refreshMessages();
     const interval = setInterval(refreshMessages, 4000);
     return () => clearInterval(interval);
@@ -116,6 +121,7 @@ export default function MessagesPage() {
     setOtherUser(other);
     setLoadingChat(true);
     setComposerOpen(false);
+    pollEpochRef.current += 1;
     try {
       const res = await axiosInstance.post("/conversation", {
         userId: user?._id,
@@ -134,6 +140,7 @@ export default function MessagesPage() {
 
   const selectConversation = (convo: Conversation) => {
     const other = convo.participants.find((p) => p._id !== user?._id) || null;
+    pollEpochRef.current += 1;
     setActiveId(convo._id);
     setOtherUser(other);
     setMessages(convo.messages);
@@ -149,6 +156,7 @@ export default function MessagesPage() {
         otherId: otherUser._id,
         content,
       });
+      pollEpochRef.current += 1;
       const convo: Conversation = res.data;
       setMessages(convo.messages);
       setText("");
@@ -164,6 +172,7 @@ export default function MessagesPage() {
   useEffect(() => {
     if (composerTimer.current) clearTimeout(composerTimer.current);
     const q = composerQuery.trim();
+    composerQueryRef.current = composerQuery;
     if (!q) {
       setComposerResults([]);
       setComposerSearching(false);
@@ -173,15 +182,17 @@ export default function MessagesPage() {
     composerTimer.current = setTimeout(async () => {
       try {
         const res = await axiosInstance.get("/users/search", { params: { q } });
+        if (composerQueryRef.current.trim() !== q) return;
         setComposerResults(
           (Array.isArray(res.data) ? res.data : []).filter(
             (u: ConversationUser) => u._id !== user?._id
           )
         );
       } catch {
-        setComposerResults([]);
+        if (composerQueryRef.current.trim() === q) setComposerResults([]);
       } finally {
-        setComposerSearching(false);
+        if (composerQueryRef.current.trim() === q)
+          setComposerSearching(false);
       }
     }, 300);
     return () => {

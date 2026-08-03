@@ -311,6 +311,12 @@ export default function TweetCard({
         tweet={tweetstate}
         open={commentsOpen}
         onClose={() => setCommentsOpen(false)}
+        onCommentAdded={() =>
+          settweetstate((prev) => ({
+            ...prev,
+            comments: (prev.comments ?? 0) + 1,
+          }))
+        }
       />
     </Card>
   );

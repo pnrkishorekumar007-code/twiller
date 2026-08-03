@@ -76,6 +76,12 @@ export default function AudioTweetPage() {
   }, []);
 
   const cleanup = useCallback(() => {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
@@ -89,6 +95,13 @@ export default function AudioTweetPage() {
   useEffect(() => {
     return () => cleanup();
   }, [cleanup]);
+
+  useEffect(() => {
+    const prevUrl = audioUrl;
+    return () => {
+      if (prevUrl) URL.revokeObjectURL(prevUrl);
+    };
+  }, [audioUrl]);
 
   const startRecording = async () => {
     if (!isAudioUploadWindowOpen()) {

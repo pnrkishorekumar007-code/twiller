@@ -29,10 +29,12 @@ export default function CommentModal({
   tweet,
   open,
   onClose,
+  onCommentAdded,
 }: {
   tweet: Tweet;
   open: boolean;
   onClose: () => void;
+  onCommentAdded?: () => void;
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -91,6 +93,7 @@ export default function CommentModal({
       });
       setComments((prev) => [...prev, res.data]);
       setText("");
+      onCommentAdded?.();
     } catch {
       toast(t("comments.postFailed"), "error");
     } finally {

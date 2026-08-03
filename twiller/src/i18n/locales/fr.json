@@ -442,7 +442,7 @@
     "otpFailed": "Échec de l'envoi du code de vérification",
     "otpVerified": "E-mail vérifié !",
     "otpInvalid": "Veuillez entrer un code valide à 6 chiffres",
-    "tweetWindow": "Les tweets audio ne peuvent être publiés qu'entre {start} et {end} IST",
+    "tweetWindow": "Les tweets audio ne peuvent être publiés qu'entre {{start}} et {{end}} IST",
     "uploadSuccess": "Tweet audio publié avec succès !",
     "uploadFailed": "Échec de la publication du tweet audio",
     "windowOpen": "La fenêtre audio est ouverte ({{start}}–{{end}} IST).",

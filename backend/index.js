@@ -303,20 +303,46 @@ app.patch("/userdata/:email", verifyAuth, async (req, res) => {
     if (String(req.authUser.email).toLowerCase() !== String(email).toLowerCase()) {
       return res.status(403).send({ error: "You can only edit your own profile" });
     }
-    const { displayName, bio, location, website, avatar, notificationsEnabled } =
-      req.body;
+    const {
+      displayName,
+      bio,
+      location,
+      website,
+      avatar,
+      phone,
+      notificationsEnabled,
+    } = req.body;
+
+    let normalizedPhone;
+    if (phone) {
+      normalizedPhone = normalizePhone(phone);
+      if (!normalizedPhone) {
+        return res.status(400).send({ error: "Invalid phone number format" });
+      }
+      const existingPhone = await User.findOne({ phone: normalizedPhone });
+      if (existingPhone && existingPhone._id.toString() !== req.authUser._id.toString()) {
+        return res.status(400).send({ error: "Phone number already registered" });
+      }
+    }
+
+    const setFields = {
+      displayName,
+      bio,
+      location,
+      website,
+      avatar,
+      notificationsEnabled,
+    };
+    if (normalizedPhone) setFields.phone = normalizedPhone;
+
+    const updateOp = { $set: setFields };
+    if (phone !== undefined && !normalizedPhone) {
+      updateOp.$unset = { phone: "" };
+    }
+
     const updated = await User.findByIdAndUpdate(
       req.authUser._id,
-      {
-        $set: {
-          displayName,
-          bio,
-          location,
-          website,
-          avatar,
-          notificationsEnabled,
-        },
-      },
+      updateOp,
       { new: true, upsert: false }
     );
     return res.status(200).send(updated);
