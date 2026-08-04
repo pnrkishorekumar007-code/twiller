@@ -25,7 +25,7 @@ function getFirebaseAdmin() {
       credential: cert(serviceAccount),
       // Must match src/context/firebase.tsx's storageBucket exactly so
       // getStorage(app).bucket() resolves the same bucket the client uses.
-      storageBucket: "twiller-project.firebasestorage.app",
+      storageBucket: "twiller-247bf.firebasestorage.app",
     });
   } catch (error) {
     console.error(
