@@ -4,6 +4,8 @@ import "./loadEnv.js";
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import User from "./models/user.js";
 import Tweet from "./models/tweet.js";
 import Notification from "./models/notification.js";
@@ -15,6 +17,14 @@ import loginSecurityRouter from "./routes/loginSecurity.js";
 import audioTweetRouter from "./routes/audioTweet.js";
 import languageRouter from "./routes/language.js";
 import { verifyAuth } from "./middleware/verifyAuth.js";
+import {
+  validateRegister,
+  validatePost,
+  validateComment,
+  validateMessage,
+  validateProfileUpdate,
+  validateConversationCreate,
+} from "./middleware/validators.js";
 import getFirebaseAdmin from "./utils/firebaseAdmin.js";
 import { getAuth } from "firebase-admin/auth";
 import { normalizePhone } from "./utils/phone.js";
@@ -22,12 +32,61 @@ import { escapeRegex } from "./utils/escapeRegex.js";
 import {
   PLAN_LIMITS,
   resetPlanQuotaIfDue,
+  hasReachedCommentLimit,
+  hasReachedMessageLimit,
 } from "./utils/planLimits.js";
 
 const app = express();
 app.set("trust proxy", 1);
-app.use(cors());
-app.use(express.json());
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
+const allowedOrigins = (process.env.FRONTEND_ORIGIN || "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+app.use(cors(corsOptions));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many auth requests, please try again later." },
+});
+const postLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many post requests, please slow down." },
+});
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use("/register", authLimiter);
+app.use(generalLimiter);
+
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/", (req, res) => {
   res.send("Tiller backend is running successfully");
@@ -67,7 +126,7 @@ mongoose
   });
 
 //Register (auth bootstrap: links a freshly created Firebase account to a Mongo doc)
-app.post("/register", async (req, res) => {
+app.post("/register", validateRegister, async (req, res) => {
   try {
     const header = req.headers.authorization || "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : null;
@@ -297,7 +356,7 @@ app.get("/bookmarks", verifyAuth, async (req, res) => {
   }
 });
 // update Profile (only your own, only profile fields)
-app.patch("/userdata/:email", verifyAuth, async (req, res) => {
+app.patch("/userdata/:email", verifyAuth, validateProfileUpdate, async (req, res) => {
   try {
     const { email } = req.params;
     if (String(req.authUser.email).toLowerCase() !== String(email).toLowerCase()) {
@@ -365,7 +424,7 @@ app.use("/api", languageRouter);
 const TWEET_PAGE_SIZE = 50;
 
 // POST
-app.post("/post", verifyAuth, async (req, res) => {
+app.post("/post", postLimiter, verifyAuth, validatePost, async (req, res) => {
   try {
     const { content, image } = req.body;
     if (!content || !content.trim()) {
@@ -449,7 +508,7 @@ app.get("/comments/:tweetId", async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-app.post("/comments/:tweetId", verifyAuth, async (req, res) => {
+app.post("/comments/:tweetId", verifyAuth, validateComment, async (req, res) => {
   try {
     const { content } = req.body;
     if (!content || !content.trim()) {
@@ -464,13 +523,21 @@ app.post("/comments/:tweetId", verifyAuth, async (req, res) => {
     if (!tweet) {
       return res.status(404).send({ error: "Tweet not found" });
     }
+    const author = req.authUser;
+    if (hasReachedCommentLimit(author)) {
+      return res.status(403).send({
+        error: "Daily comment limit reached for your plan. Upgrade to comment more.",
+      });
+    }
     const comment = await Comment.create({
       tweet: tweet._id,
-      author: req.authUser._id,
+      author: author._id,
       content,
     });
     tweet.comments += 1;
     await tweet.save();
+    author.commentCount = (author.commentCount || 0) + 1;
+    await author.save();
     const populated = await Comment.findById(comment._id).populate(
       "author",
       "displayName username avatar"
@@ -603,7 +670,7 @@ app.get("/conversation", verifyAuth, async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-app.post("/conversation", verifyAuth, async (req, res) => {
+app.post("/conversation", verifyAuth, validateConversationCreate, async (req, res) => {
   try {
     const userId = req.authUser._id;
     const { otherId } = req.body;
@@ -625,7 +692,7 @@ app.post("/conversation", verifyAuth, async (req, res) => {
     return res.status(400).send({ error: error.message });
   }
 });
-app.post("/message", verifyAuth, async (req, res) => {
+app.post("/message", verifyAuth, validateMessage, async (req, res) => {
   try {
     const userId = req.authUser._id;
     const { otherId, content } = req.body;
@@ -638,6 +705,12 @@ app.post("/message", verifyAuth, async (req, res) => {
     if (content.length > 500) {
       return res.status(400).send({
         error: "Message content must be 500 characters or less",
+      });
+    }
+    const author = req.authUser;
+    if (hasReachedMessageLimit(author)) {
+      return res.status(403).send({
+        error: "Daily message limit reached for your plan. Upgrade to send more.",
       });
     }
     let conversation = await Conversation.findOne({
@@ -656,6 +729,8 @@ app.post("/message", verifyAuth, async (req, res) => {
     conversation.messages.push({ sender: userId, content });
     conversation.updatedAt = new Date();
     await conversation.save();
+    author.messageCount = (author.messageCount || 0) + 1;
+    await author.save();
     return res.status(201).send(conversation);
   } catch (error) {
     return res.status(400).send({ error: error.message });

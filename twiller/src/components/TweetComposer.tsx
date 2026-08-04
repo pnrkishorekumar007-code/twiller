@@ -6,7 +6,7 @@ import { Card, CardContent } from "./ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
-import { Image, BarChart3, Smile, Calendar, MapPin, Globe, X } from "lucide-react";
+import { Image as LucideImage, BarChart3, Smile, Calendar, MapPin, Globe, X } from "lucide-react";
 import { Separator } from "./ui/separator";
 import axios, { AxiosError } from "axios";
 import axiosInstance from "@/lib/axiosInstance";
@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useToast } from "@/context/ToastContext";
 import { PLAN_LIMITS } from "@/lib/plans";
 import { useTranslation } from "react-i18next";
+import Image from "next/image";
 
 interface Tweet {
   _id: string;
@@ -122,17 +123,19 @@ const TweetComposer = ({
               />
 
               {imageurl && (
-                <div className="relative mb-3 mt-1 overflow-hidden rounded-2xl border border-gray-800">
-                  <img
+                <div className="relative mb-3 mt-1 overflow-hidden rounded-2xl border border-gray-800" style={{ aspectRatio: "16/9" }}>
+                  <Image
                     src={imageurl}
                     alt={t("composer.imagePreview")}
-                    className="max-h-96 w-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
                   />
                   <button
                     type="button"
                     onClick={() => setimageurl("")}
                     aria-label={t("composer.removeImage")}
-                    className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-white transition-colors hover:bg-black"
+                    className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-white transition-colors hover:bg-black z-10"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -150,8 +153,7 @@ const TweetComposer = ({
                       {isUploading ? (
                         <span className="block h-5 w-5 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
                       ) : (
-                        // eslint-disable-next-line jsx-a11y/alt-text
-                        <Image className="h-5 w-5" />
+                        <LucideImage className="h-5 w-5" />
                       )}
                       <input
                         type="file"

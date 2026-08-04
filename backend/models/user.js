@@ -25,9 +25,16 @@ const UserSchema = mongoose.Schema({
   },
   planRenewedAt: { type: Date, default: Date.now },
   tweetCount: { type: Number, default: 0 },
+  commentCount: { type: Number, default: 0 },
+  commentCountResetAt: { type: Date, default: Date.now },
+  messageCount: { type: Number, default: 0 },
+  messageCountResetAt: { type: Date, default: Date.now },
   following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   followedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tweet" }],
 });
+
+UserSchema.index({ username: "text", displayName: "text" });
+UserSchema.index({ displayName: 1 });
 
 export default mongoose.model("User", UserSchema);

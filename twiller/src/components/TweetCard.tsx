@@ -16,6 +16,7 @@ import { useNav } from "@/context/NavContext";
 import axiosInstance from "@/lib/axiosInstance";
 import CommentModal from "./CommentModal";
 import { useTranslation } from "react-i18next";
+import Image from "next/image";
 
 interface Author {
   _id?: string;
@@ -216,12 +217,14 @@ export default function TweetCard({
             )}
 
             {tweetstate.image && (
-              <div className="mb-3 rounded-2xl overflow-hidden">
-                <img
+              <div className="mb-3 rounded-2xl overflow-hidden relative" style={{ aspectRatio: "16/9" }}>
+                <Image
                   src={tweetstate.image}
                   alt={t("tweet.image")}
+                  fill
                   loading="lazy"
-                  className="w-full h-auto max-h-96 object-cover"
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 50vw"
                 />
               </div>
             )}
