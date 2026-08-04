@@ -53,6 +53,7 @@ app.get("/health", (req, res) => {
 
 const port = process.env.PORT || 5000;
 const url = process.env.MONGODB_URL;
+console.log("Mongo URI:", process.env.MONGODB_URL);
 
 mongoose
   .connect(url)
