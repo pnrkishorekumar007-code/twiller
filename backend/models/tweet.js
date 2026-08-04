@@ -18,5 +18,6 @@ const TweetSchema = mongoose.Schema({
 // Feed queries sort by timestamp (cursor pagination) and filter by author.
 TweetSchema.index({ timestamp: -1 });
 TweetSchema.index({ author: 1, timestamp: -1 });
+TweetSchema.index({ content: "text" });
 
 export default mongoose.model("Tweet", TweetSchema);
