@@ -484,5 +484,11 @@
     "sessions": "sessions",
     "view": "View",
     "noData": "No recent activity"
+  },
+  "errorBoundary": {
+    "somethingWentWrong": "Something went wrong",
+    "tryRefresh": "Try refreshing the page to fix this issue.",
+    "errorDetails": "Error details",
+    "refreshPage": "Refresh Page"
   }
 }

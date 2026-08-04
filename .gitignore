@@ -6,6 +6,7 @@ node_modules/
 .env.production
 !backend/.env.example
 !twiller/.env.example
+.copilot-azure/
 .next/
 out/
 build/
