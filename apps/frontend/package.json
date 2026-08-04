@@ -26,7 +26,7 @@
     "firebase": "^12.1.0",
     "i18next": "^26.3.6",
     "lucide-react": "^0.540.0",
-    "next": "15.5.9",
+    "next": "15.5.21",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-i18next": "^17.0.11",
