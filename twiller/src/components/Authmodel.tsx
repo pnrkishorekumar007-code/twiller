@@ -134,7 +134,12 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
         "Server response:",
         (error as { response?: { data?: unknown } })?.response?.data
       );
-      setErrors({ general: getFirebaseErrorMessage(error, t) });
+      const code = (error as { code?: string })?.code;
+      if (mode === "signup" && code === "auth/email-already-in-use") {
+        switchToSignInForExistingEmail();
+      } else {
+        setErrors({ general: getFirebaseErrorMessage(error, t) });
+      }
     }
   };
 
@@ -149,6 +154,15 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     setMode(mode === 'login' ? 'signup' : 'login');
     setErrors({});
     setFormData({ email: '', password: '', username: '', displayName: '', phone: '' });
+  };
+
+  // Signup failed because the Firebase account already exists: instead of
+  // leaving the user stuck on the signup form, switch to login mode with the
+  // email pre-filled so they can finish signing in immediately.
+  const switchToSignInForExistingEmail = () => {
+    setMode('login');
+    setFormData((prev) => ({ ...prev, password: '' }));
+    setErrors({ general: t('errors.emailInUse') });
   };
 
   return (
