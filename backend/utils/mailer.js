@@ -23,25 +23,52 @@ function getSmtpTransport() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    // Fail fast and precisely: without these, nodemailer waits up to 2
+    // minutes for a connection that a provider may silently drop (e.g.
+    // Gmail refusing datacenter IPs), and callers only ever see "timed out".
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
   });
   return smtpTransport;
 }
 
+function resetSmtpTransport() {
+  if (smtpTransport) {
+    try {
+      smtpTransport.close();
+    } catch {
+      // transport already closed
+    }
+    smtpTransport = null;
+  }
+}
+
 async function sendEmail({ to, subject, html }) {
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    try {
-      const info = await getSmtpTransport().sendMail({
-        from: process.env.SMTP_USER,
-        to,
-        subject,
-        html,
-      });
-      console.log(
-        `[mail] Sent via SMTP (${process.env.SMTP_HOST}) to ${to}: ${subject} (${info.messageId})`
-      );
-    } catch (err) {
-      console.error(`[mail] SMTP send to ${to} failed:`, err);
-      throw err;
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = Number(process.env.SMTP_PORT || 587);
+    const smtpSecure = smtpPort === 465;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const info = await getSmtpTransport().sendMail({
+          from: process.env.SMTP_USER,
+          to,
+          subject,
+          html,
+        });
+        console.log(
+          `[mail] Sent via SMTP (${smtpHost}:${smtpPort}${smtpSecure ? "s" : ""}) to ${to}: ${subject} (${info.messageId})`
+        );
+        return;
+      } catch (err) {
+        console.error(
+          `[mail] SMTP send to ${to} failed (attempt ${attempt}/2, ${smtpHost}:${smtpPort}, secure=${smtpSecure}):`,
+          err.code || err.responseCode || err.message
+        );
+        resetSmtpTransport();
+        if (attempt === 2) throw err;
+      }
     }
     return;
   }

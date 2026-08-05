@@ -69,7 +69,7 @@ router.post("/login-session", verifyAuth, async (req, res) => {
             username: user.username,
             otp,
           }),
-          20000,
+          30000,
           "login OTP email"
         );
       } catch (emailErr) {
