@@ -1,5 +1,14 @@
 import { Resend } from "resend";
 import nodemailer from "nodemailer";
+import dns from "node:dns";
+
+// Hosts like smtp.gmail.com resolve to IPv6 first; servers without IPv6
+// (Render free tier etc.) then fail with ENETUNREACH. Prefer IPv4 everywhere.
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch {
+  // Node < 17: keep the default resolution order
+}
 
 const PLAN_LIMITS = { free: 1, bronze: 3, silver: 5, gold: "Unlimited" };
 
