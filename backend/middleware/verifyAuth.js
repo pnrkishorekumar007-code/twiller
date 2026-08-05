@@ -25,6 +25,12 @@ export async function verifyAuth(req, res, next) {
 
     const decoded = await getAuth(app).verifyIdToken(token);
 
+    // Which provider verified this token ("google.com", "password", ...).
+    // Google-verified sessions skip the email OTP gate: OAuth already proved
+    // control of the account, so the extra code is redundant (and avoids
+    // depending on SMTP being reachable from the deployment).
+    req.signInProvider = decoded.firebase?.sign_in_provider || null;
+
     // Look up by firebaseUid first; fall back to email for users who
     // registered before this field existed, and backfill it once found.
     let user = await User.findOne({ firebaseUid: decoded.uid });

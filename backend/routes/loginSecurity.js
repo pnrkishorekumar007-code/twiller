@@ -44,7 +44,7 @@ router.post("/login-session", verifyAuth, async (req, res) => {
         .json({ blocked: true, reason: "mobile_time_window" });
     }
 
-    if (isChrome(info.browser)) {
+    if (isChrome(info.browser) && req.signInProvider !== "google.com") {
       const otp = crypto.randomInt(100000, 999999);
       const otpHash = await bcrypt.hash(String(otp), 10);
 
@@ -87,7 +87,14 @@ router.post("/login-session", verifyAuth, async (req, res) => {
       return res.status(200).json({ otpRequired: true });
     }
 
-    // Microsoft browsers (Edge/IE) and any other browser log in directly.
+    // Google-verified sign-ins skip the OTP gate (OAuth already verified the
+    // account); Microsoft browsers (Edge/IE) and any other browser also log in
+    // directly.
+    if (req.signInProvider === "google.com") {
+      console.log(
+        `[login-session] Chrome Google sign-in for ${user.email} - skipping OTP (provider-verified)`
+      );
+    }
     await LoginHistory.create({
       user: user._id,
       browser: info.browser,
