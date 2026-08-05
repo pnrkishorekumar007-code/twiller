@@ -102,9 +102,30 @@ export default function LanguageOtpModal({
       setChannel(nextChannel);
 
       if (nextChannel === "phone") {
-        await sendPhoneSms(res.data?.phone);
+        try {
+          await sendPhoneSms(res.data?.phone);
+        } catch (smsErr) {
+          // Firebase Phone Auth couldn't start the SMS (misconfiguration,
+          // provider disabled, quota, network…). Fall back to the email OTP
+          // channel so the switch can still be completed.
+          console.error("Phone OTP failed, falling back to email:", smsErr);
+          try {
+            verifierRef.current?.clear();
+          } catch {
+            /* verifier already gone */
+          }
+          verifierRef.current = null;
+          confirmationRef.current = null;
+          await axiosInstance.post("/api/language/request-otp", {
+            targetLanguage,
+            channel: "email",
+          });
+          setChannel("email");
+          return;
+        }
       }
     } catch (err) {
+      console.error("request-otp failed:", err);
       const fbKey = getFirebaseErrorKey(err);
       if (fbKey) {
         setError(t(fbKey));

@@ -35,10 +35,15 @@ router.post("/language/request-otp", verifyAuth, async (req, res) => {
       return res.status(400).json({ error: "invalid" });
     }
 
+    // The client can force the email channel (e.g. after Firebase Phone Auth
+    // fails to start an SMS). Without the override, phone is used when the
+    // account has a number and the target language isn't in EMAIL_OTP_LANGUAGES.
+    const forceEmail = req.body.channel === "email";
+
     // Phone channel: the SMS + reCAPTCHA flow runs entirely in Firebase Phone
     // Auth on the client, so no server-side OTP is generated here. The ID token
     // produced after the code is confirmed is verified in /language/verify-otp.
-    if (!EMAIL_OTP_LANGUAGES.includes(targetLanguage)) {
+    if (!forceEmail && !EMAIL_OTP_LANGUAGES.includes(targetLanguage)) {
       const phone = toE164(user.phone);
       if (phone) {
         return res
