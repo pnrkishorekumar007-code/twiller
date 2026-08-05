@@ -1,11 +1,52 @@
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 const PLAN_LIMITS = { free: 1, bronze: 3, silver: 5, gold: "Unlimited" };
 
 export const resend = new Resend(process.env.RESEND_API_KEY);
 // Dev/test sender. Swap to a verified-domain sender ("Twiller <noreply@yourdomain.com>")
-// once a domain is verified in Resend.
+// once a domain is verified in Resend. SMTP sends from the configured SMTP_USER.
 const FROM_ADDRESS = "Twiller <onboarding@resend.dev>";
+
+// SMTP is preferred when configured (delivers to any recipient). Resend is the
+// fallback but, with the default onboarding sender, only delivers to the
+// account owner's own address unless a domain is verified. The transport is
+// created lazily so importing this module never requires credentials.
+let smtpTransport = null;
+function getSmtpTransport() {
+  if (smtpTransport) return smtpTransport;
+  smtpTransport = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: Number(process.env.SMTP_PORT || 587) === 465,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+  return smtpTransport;
+}
+
+async function sendEmail({ to, subject, html }) {
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    await getSmtpTransport().sendMail({
+      from: process.env.SMTP_USER,
+      to,
+      subject,
+      html,
+    });
+    return;
+  }
+  const { error } = await resend.emails.send({
+    from: FROM_ADDRESS,
+    to,
+    subject,
+    html,
+  });
+  if (error) {
+    throw new Error(`Email delivery failed: ${error.message}`);
+  }
+}
 
 function planDisplayName(plan) {
   return (plan || "").charAt(0).toUpperCase() + (plan || "").slice(1);
@@ -98,8 +139,7 @@ export async function sendInvoiceEmail({
   date,
   invoiceNumber,
 }) {
-  await resend.emails.send({
-    from: FROM_ADDRESS,
+  await sendEmail({
     to,
     subject: `Twiller ${planDisplayName(plan)} Plan Invoice`,
     html: buildInvoiceEmailHtml({
@@ -114,8 +154,7 @@ export async function sendInvoiceEmail({
 }
 
 export async function sendLoginOtpEmail({ to, username, otp }) {
-  await resend.emails.send({
-    from: FROM_ADDRESS,
+  await sendEmail({
     to,
     subject: "Twiller Login Verification Code",
     html: `
@@ -142,8 +181,7 @@ export async function sendLoginOtpEmail({ to, username, otp }) {
 }
 
 export async function sendLanguageOtpEmail({ to, username, otp, targetLanguage }) {
-  await resend.emails.send({
-    from: FROM_ADDRESS,
+  await sendEmail({
     to,
     subject: "Twiller Language Change Verification",
     html: `
@@ -170,8 +208,7 @@ export async function sendLanguageOtpEmail({ to, username, otp, targetLanguage }
 }
 
 export async function sendAudioUploadOtpEmail({ to, username, otp }) {
-  await resend.emails.send({
-    from: FROM_ADDRESS,
+  await sendEmail({
     to,
     subject: "Twiller Audio Tweet Verification",
     html: `
@@ -198,8 +235,7 @@ export async function sendAudioUploadOtpEmail({ to, username, otp }) {
 }
 
 export async function sendPasswordResetEmail({ to, username, newPassword }) {
-  await resend.emails.send({
-    from: FROM_ADDRESS,
+  await sendEmail({
     to,
     subject: "Twiller Password Reset",
     html: `
@@ -235,8 +271,7 @@ export async function sendSubscriptionDetailsEmail({
   activationDate,
   expiryDate,
 }) {
-  await resend.emails.send({
-    from: FROM_ADDRESS,
+  await sendEmail({
     to,
     subject: `Twiller ${planDisplayName(plan)} Plan - Subscription Details`,
     html: buildSubscriptionDetailsEmailHtml({
