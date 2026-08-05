@@ -78,9 +78,9 @@ router.post("/login-session", verifyAuth, async (req, res) => {
           emailErr
         );
         await LoginOtp.deleteOne({ user: user._id });
+        const cause = emailErr?.message || "unknown mailer error";
         return res.status(500).json({
-          error:
-            "We couldn't send the verification code to your email. Please try again in a moment.",
+          error: `We couldn't send the verification code to your email. Cause: ${cause}`,
         });
       }
 

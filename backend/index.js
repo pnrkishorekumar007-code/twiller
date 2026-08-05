@@ -62,6 +62,16 @@ const port = process.env.PORT || 5000;
 const url = process.env.MONGODB_URL;
 console.log("Mongo URI:", process.env.MONGODB_URL);
 
+if (
+  !(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
+) {
+  console.warn(
+    "⚠️  SMTP not configured (SMTP_HOST/SMTP_USER/SMTP_PASS missing). " +
+      "OTP emails will fall back to Resend and FAIL for any recipient other than pnrkishorekumar007@gmail.com. " +
+      "Set SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_USER and SMTP_PASS (Gmail app password) in this deployment."
+  );
+}
+
 mongoose
   .connect(url)
   .then(() => {
