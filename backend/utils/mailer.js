@@ -2,10 +2,92 @@ import { Resend } from "resend";
 
 const PLAN_LIMITS = { free: 1, bronze: 3, silver: 5, gold: "Unlimited" };
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export const resend = new Resend(process.env.RESEND_API_KEY);
 // Dev/test sender. Swap to a verified-domain sender ("Twiller <noreply@yourdomain.com>")
 // once a domain is verified in Resend.
 const FROM_ADDRESS = "Twiller <onboarding@resend.dev>";
+
+function planDisplayName(plan) {
+  return (plan || "").charAt(0).toUpperCase() + (plan || "").slice(1);
+}
+
+function formatRupees(amountPaise) {
+  return `₹${((amountPaise || 0) / 100).toFixed(2)}`;
+}
+
+function emailShell({ title, heading, bodyHtml }) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+      <div style="background: #0f172a; color: #fff; padding: 24px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">Twiller</h1>
+        <p style="margin: 4px 0 0; color: #94a3b8;">${title}</p>
+      </div>
+      <div style="padding: 24px;">${bodyHtml}</div>
+      <div style="background: #f8fafc; padding: 16px; text-align: center; color: #94a3b8; font-size: 12px;">
+        &copy; ${new Date().getFullYear()} Twiller. All rights reserved.
+      </div>
+    </div>
+  `;
+}
+
+function invoiceRow(label, value) {
+  return `
+    <tr>
+      <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">${label}</td>
+      <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;"><strong>${value}</strong></td>
+    </tr>
+  `;
+}
+
+export function buildInvoiceEmailHtml({
+  username,
+  plan,
+  amount,
+  paymentId,
+  date,
+  invoiceNumber,
+}) {
+  const planName = planDisplayName(plan);
+  const bodyHtml = `
+    <p>Hi <strong>@${username}</strong>,</p>
+    <p>Thank you for upgrading to the <strong>${planName}</strong> plan. Your payment was received successfully.</p>
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+      ${invoiceRow("Invoice Number", invoiceNumber || "—")}
+      ${invoiceRow("Transaction ID", paymentId || "—")}
+      ${invoiceRow("Plan Name", planName)}
+      ${invoiceRow("Amount", formatRupees(amount))}
+      ${invoiceRow("Payment Date (IST)", date)}
+    </table>
+    <p style="color: #6b7280; font-size: 13px;">Questions? Reply to this email and we'll be happy to help.</p>
+  `;
+  return emailShell({ title: "Payment Invoice", heading: planName, bodyHtml });
+}
+
+export function buildSubscriptionDetailsEmailHtml({
+  username,
+  plan,
+  amount,
+  activationDate,
+  expiryDate,
+}) {
+  const planName = planDisplayName(plan);
+  const tweetLimit =
+    PLAN_LIMITS[plan] === Infinity ? "Unlimited" : PLAN_LIMITS[plan];
+  const bodyHtml = `
+    <p>Hi <strong>@${username}</strong>,</p>
+    <p>Thank you for upgrading to the <strong>${planName}</strong> plan. Your subscription is now active.</p>
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+      ${invoiceRow("Plan Name", planName)}
+      ${invoiceRow("Price", formatRupees(amount))}
+      ${invoiceRow("Tweet Limit", `${tweetLimit} per month`)}
+      ${invoiceRow("Activation Date (IST)", activationDate || "—")}
+      ${invoiceRow("Expiry Date (IST)", expiryDate || "—")}
+    </table>
+    <p style="color: #6b7280; font-size: 13px;">Your plan renews automatically unless cancelled.</p>
+    <p style="color: #6b7280; font-size: 13px;">Questions? Reply to this email and we'll be happy to help.</p>
+  `;
+  return emailShell({ title: "Subscription Details", heading: planName, bodyHtml });
+}
 
 export async function sendInvoiceEmail({
   to,
@@ -14,52 +96,20 @@ export async function sendInvoiceEmail({
   amount,
   paymentId,
   date,
+  invoiceNumber,
 }) {
-  const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
-  const tweetLimit = PLAN_LIMITS[plan];
-
   await resend.emails.send({
     from: FROM_ADDRESS,
     to,
-    subject: `Twiller ${planName} Plan Invoice`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
-        <div style="background: #0f172a; color: #fff; padding: 24px; text-align: center;">
-          <h1 style="margin: 0; font-size: 24px;">Twiller</h1>
-          <p style="margin: 4px 0 0; color: #94a3b8;">Payment Invoice</p>
-        </div>
-        <div style="padding: 24px;">
-          <p>Hi <strong>@${username}</strong>,</p>
-          <p>Thank you for upgrading to the <strong>${planName}</strong> plan. Your payment was received successfully.</p>
-          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-            <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Plan</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;"><strong>${planName}</strong></td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Amount paid</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;"><strong>₹${(amount / 100).toFixed(2)}</strong></td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Payment ID</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${paymentId}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Date</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${date}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #6b7280;">Tweet limit</td>
-              <td style="padding: 8px 0; text-align: right;"><strong>${tweetLimit} per month</strong></td>
-            </tr>
-          </table>
-          <p style="color: #6b7280; font-size: 13px;">Questions? Reply to this email and we'll be happy to help.</p>
-        </div>
-        <div style="background: #f8fafc; padding: 16px; text-align: center; color: #94a3b8; font-size: 12px;">
-          &copy; ${new Date().getFullYear()} Twiller. All rights reserved.
-        </div>
-      </div>
-    `,
+    subject: `Twiller ${planDisplayName(plan)} Plan Invoice`,
+    html: buildInvoiceEmailHtml({
+      username,
+      plan,
+      amount,
+      paymentId,
+      date,
+      invoiceNumber,
+    }),
   });
 }
 
@@ -182,45 +232,21 @@ export async function sendSubscriptionDetailsEmail({
   amount,
   paymentId,
   date,
+  activationDate,
+  expiryDate,
 }) {
-  const planName = plan.charAt(0).toUpperCase() + plan.slice(1);
   await resend.emails.send({
     from: FROM_ADDRESS,
     to,
-    subject: `Twiller ${planName} Plan - Subscription Details`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
-        <div style="background: #0f172a; color: #fff; padding: 24px; text-align: center;">
-          <h1 style="margin: 0; font-size: 24px;">Twiller</h1>
-          <p style="margin: 4px 0 0; color: #94a3b8;">Subscription Details</p>
-        </div>
-        <div style="padding: 24px;">
-          <p>Hi <strong>@${username}</strong>,</p>
-          <p>Thank you for upgrading to the <strong>${planName}</strong> plan. Your subscription is now active.</p>
-          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-            <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Plan</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;"><strong>${planName}</strong></td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Amount paid</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;"><strong>₹${(amount / 100).toFixed(2)}</strong></td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Payment ID</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${paymentId}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Date</td>
-              <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">${date}</td>
-            </tr>
-          </table>
-          <p style="color: #6b7280; font-size: 13px;">Questions? Reply to this email and we'll be happy to help.</p>
-        </div>
-        <div style="background: #f8fafc; padding: 16px; text-align: center; color: #94a3b8; font-size: 12px;">
-          &copy; ${new Date().getFullYear()} Twiller. All rights reserved.
-        </div>
-      </div>
-    `,
+    subject: `Twiller ${planDisplayName(plan)} Plan - Subscription Details`,
+    html: buildSubscriptionDetailsEmailHtml({
+      username,
+      plan,
+      amount,
+      paymentId,
+      date,
+      activationDate,
+      expiryDate,
+    }),
   });
 }

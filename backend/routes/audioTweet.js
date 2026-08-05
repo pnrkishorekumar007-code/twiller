@@ -13,8 +13,11 @@ import { sendAudioUploadOtpEmail } from "../utils/mailer.js";
 import { verifyAuth } from "../middleware/verifyAuth.js";
 import getFirebaseAdmin from "../utils/firebaseAdmin.js";
 import {
-  PLAN_LIMITS,
-  resetPlanQuotaIfDue,
+  getTweetLimit,
+  validateSubscription,
+  resetQuotaIfNeeded,
+  consumeQuotaSlot,
+  releaseQuotaSlot,
 } from "../utils/planLimits.js";
 
 dayjs.extend(utc);
@@ -169,50 +172,59 @@ router.post(
       }
 
       const now = Date.now();
-      resetPlanQuotaIfDue(user, now);
+      if (validateSubscription(user, now) || resetQuotaIfNeeded(user, now)) {
+        await user.save();
+      }
 
-      const limit = PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.free;
-      if (user.tweetCount >= limit) {
-        return res.status(403).send({
-          error: "Tweet limit reached for your plan. Upgrade to post more.",
+      // Atomically reserve one posting slot (see backend/utils/planLimits.js).
+      const reserved = await consumeQuotaSlot(user._id, getTweetLimit(user.plan));
+      if (!reserved) {
+        return res.status(403).json({
+          success: false,
+          message: "Tweet limit reached. Please upgrade your plan.",
         });
       }
 
-      const app = getFirebaseAdmin();
-      if (!app) {
-        return res.status(500).json({
-          error:
-            "Audio upload is unavailable (FIREBASE_SERVICE_ACCOUNT_KEY missing or invalid).",
+      try {
+        const app = getFirebaseAdmin();
+        if (!app) {
+          throw new Error(
+            "Audio upload is unavailable (FIREBASE_SERVICE_ACCOUNT_KEY missing or invalid)."
+          );
+        }
+
+        const bucket = getStorage(app).bucket();
+        const filename = `audio-tweets/${user._id}-${Date.now()}.webm`;
+        const file = bucket.file(filename);
+        await file.save(req.file.buffer, { contentType: req.file.mimetype });
+
+        // makePublic() relies on the legacy per-object ACL system, which is
+        // disabled on buckets with uniform bucket-level access (the default for
+        // newer Firebase Storage buckets) — it throws there. Signed URLs don't
+        // depend on ACLs, so use one instead. Effectively permanent for this app.
+        const [url] = await file.getSignedUrl({
+          action: "read",
+          expires: "01-01-2100",
         });
+
+        const content = (req.body.content || "").toString().trim();
+        const tweet = new Tweet({
+          author: user._id,
+          content: content || undefined,
+          audio: { url, durationSeconds },
+        });
+        await tweet.save();
+
+        // tweetCount was incremented atomically by consumeQuotaSlot; only the
+        // OTP grant flag needs persisting here (user.save persists modified paths).
+        user.audioUploadVerifiedAt = null;
+        await user.save();
+
+        return res.status(201).json(tweet);
+      } catch (err) {
+        await releaseQuotaSlot(user._id);
+        throw err;
       }
-
-      const bucket = getStorage(app).bucket();
-      const filename = `audio-tweets/${user._id}-${Date.now()}.webm`;
-      const file = bucket.file(filename);
-      await file.save(req.file.buffer, { contentType: req.file.mimetype });
-
-      // makePublic() relies on the legacy per-object ACL system, which is
-      // disabled on buckets with uniform bucket-level access (the default for
-      // newer Firebase Storage buckets) — it throws there. Signed URLs don't
-      // depend on ACLs, so use one instead. Effectively permanent for this app.
-      const [url] = await file.getSignedUrl({
-        action: "read",
-        expires: "01-01-2100",
-      });
-
-      const content = (req.body.content || "").toString().trim();
-      const tweet = new Tweet({
-        author: user._id,
-        content: content || undefined,
-        audio: { url, durationSeconds },
-      });
-      await tweet.save();
-
-      user.tweetCount += 1;
-      user.audioUploadVerifiedAt = null;
-      await user.save();
-
-      return res.status(201).json(tweet);
     } catch (error) {
       console.error("audio post error:", error);
       if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {

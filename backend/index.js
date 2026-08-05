@@ -20,8 +20,11 @@ import { getAuth } from "firebase-admin/auth";
 import { normalizePhone } from "./utils/phone.js";
 import { escapeRegex } from "./utils/escapeRegex.js";
 import {
-  PLAN_LIMITS,
-  resetPlanQuotaIfDue,
+  getTweetLimit,
+  validateSubscription,
+  resetQuotaIfNeeded,
+  consumeQuotaSlot,
+  releaseQuotaSlot,
 } from "./utils/planLimits.js";
 
 const app = express();
@@ -45,7 +48,11 @@ app.get("/health", (req, res) => {
     status: "ok",
     firebaseAdmin: firebaseStatus,
     mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-    razorpayKey: process.env.RAZORPAY_KEY_ID ? "configured" : "missing",
+    razorpayKey:
+      process.env.RAZORPAY_KEY_ID &&
+      (process.env.RAZORPAY_SECRET || process.env.RAZORPAY_KEY_SECRET)
+        ? "configured"
+        : "missing",
     smtp: process.env.SMTP_HOST ? "configured" : "missing",
     port: process.env.PORT || "default",
   });
@@ -352,6 +359,7 @@ app.patch("/userdata/:email", verifyAuth, async (req, res) => {
   }
 });
 // Payment API
+app.use("/api/payment", paymentRouter);
 app.use("/payment", paymentRouter);
 // Auth API
 app.use("/auth", passwordResetRouter);
@@ -380,20 +388,31 @@ app.post("/post", verifyAuth, async (req, res) => {
 
     const author = req.authUser;
 
-    resetPlanQuotaIfDue(author);
-    await author.save();
+    // Auto-downgrade expired plans and reset monthly quota when due.
+    if (validateSubscription(author) || resetQuotaIfNeeded(author)) {
+      await author.save();
+    }
 
-    if (author.tweetCount >= (PLAN_LIMITS[author.plan] ?? PLAN_LIMITS.free)) {
-      return res.status(403).send({
-        error: "Tweet limit reached for your plan. Upgrade to post more.",
+    const limit = getTweetLimit(author.plan);
+
+    // Atomically reserve one posting slot. Checking and incrementing in a
+    // single conditional update prevents two parallel requests from both
+    // passing the limit check and exceeding the plan quota.
+    const reserved = await consumeQuotaSlot(author._id, limit);
+    if (!reserved) {
+      return res.status(403).json({
+        success: false,
+        message: "Tweet limit reached. Please upgrade your plan.",
       });
     }
 
     const tweet = new Tweet({ content, image: image || null, author: author._id });
-    await tweet.save();
-
-    author.tweetCount += 1;
-    await author.save();
+    try {
+      await tweet.save();
+    } catch (err) {
+      await releaseQuotaSlot(author._id);
+      throw err;
+    }
 
     return res.status(201).send(tweet);
   } catch (error) {

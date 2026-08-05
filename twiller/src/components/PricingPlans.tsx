@@ -76,6 +76,16 @@ interface Plan {
   highlight?: boolean;
 }
 
+// Payment endpoints return { success, message } on error; fall back to the
+// older { error } shape and finally the caller's fallback string.
+function paymentErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof AxiosError) {
+    const msg = err.response?.data?.message ?? err.response?.data?.error;
+    if (typeof msg === "string" && msg.trim()) return msg;
+  }
+  return fallback;
+}
+
 const PLANS: Plan[] = [
   {
     id: "free",
@@ -157,7 +167,7 @@ const PricingPlans = () => {
     setError(null);
     try {
       await waitForRazorpaySdk();
-      const res = await axiosInstance.post("/payment/create-order", {
+      const res = await axiosInstance.post("/api/payment/create-order", {
         plan: plan.id,
       });
       const { orderId, amount, currency, keyId } = res.data;
@@ -173,12 +183,12 @@ const PricingPlans = () => {
         order_id: orderId,
         handler: async (response: RazorpayResponse) => {
           try {
-            const verifyRes = await axiosInstance.post("/payment/verify", {
+            const verifyRes = await axiosInstance.post("/api/payment/verify", {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             });
-            const updatedUser = verifyRes.data;
+            const updatedUser = verifyRes.data.user;
             setUser(updatedUser);
             localStorage.setItem("twitter-user", JSON.stringify(updatedUser));
             setError(null);
@@ -190,11 +200,7 @@ const PricingPlans = () => {
             );
           } catch (verifyErr: unknown) {
             console.error("Payment verification failed:", verifyErr);
-            const msg =
-              verifyErr instanceof AxiosError &&
-              verifyErr.response?.data?.error
-                ? verifyErr.response.data.error
-                : t("pricing.paymentVerificationFailed");
+            const msg = paymentErrorMessage(verifyErr, t("pricing.paymentVerificationFailed"));
             setError(msg);
             toast(msg, "error");
           }
@@ -219,11 +225,9 @@ const PricingPlans = () => {
     } catch (err: unknown) {
       console.error("Create order failed:", err);
       const msg =
-        err instanceof AxiosError && err.response?.data?.error
-          ? err.response.data.error
-          : err instanceof Error && err.message === "razorpay_sdk_timeout"
-            ? t("pricing.sdkLoadFailed")
-            : t("pricing.startFailed");
+        err instanceof Error && err.message === "razorpay_sdk_timeout"
+          ? t("pricing.sdkLoadFailed")
+          : paymentErrorMessage(err, t("pricing.startFailed"));
       setError(msg);
       toast(msg, "error");
       setProcessing(null);

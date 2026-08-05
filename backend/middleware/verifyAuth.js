@@ -1,6 +1,10 @@
 import { getAuth } from "firebase-admin/auth";
 import getFirebaseAdmin from "../utils/firebaseAdmin.js";
 import User from "../models/user.js";
+import {
+  validateSubscription,
+  resetQuotaIfNeeded,
+} from "../utils/planLimits.js";
 
 export async function verifyAuth(req, res, next) {
   try {
@@ -34,6 +38,15 @@ export async function verifyAuth(req, res, next) {
 
     if (!user) {
       return res.status(404).json({ error: "No matching account found" });
+    }
+
+    // Subscription lifecycle runs on every authenticated request (no cron):
+    // downgrade expired plans and reset the monthly quota when its 30-day
+    // window has elapsed. Only saved when something actually changed.
+    const downgraded = validateSubscription(user);
+    const quotaReset = resetQuotaIfNeeded(user);
+    if (downgraded || quotaReset) {
+      await user.save();
     }
 
     req.authUser = user; // the verified, trusted Mongo user doc

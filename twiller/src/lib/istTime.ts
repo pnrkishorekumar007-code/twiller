@@ -77,10 +77,11 @@ function countdownToISTHour(hour: number, date: Date): Countdown {
   };
 }
 
-// Counts down to the next 10:00 AM IST (when payments open).
+// Counts down to the next 10:00 AM IST (when payments open). While the
+// window is open it counts down to the 11:00 AM closing instead.
 export function paymentCountdown(date: Date = new Date()): Countdown {
   const open = isPaymentWindowOpen(date);
-  const cd = countdownToISTHour(10, date);
+  const cd = countdownToISTHour(open ? 11 : 10, date);
   return { ...cd, open };
 }
 

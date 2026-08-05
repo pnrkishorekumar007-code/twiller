@@ -24,7 +24,7 @@ const TweetComposer = ({
 }: {
   onTweetPosted?: (tweet: Tweet) => void;
 }) => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
   const [content, setContent] = useState("");
@@ -59,11 +59,14 @@ const TweetComposer = ({
       onTweetPosted?.(res.data);
       setContent("");
       setimageurl("");
+      setUser({ ...user, tweetCount: (user.tweetCount ?? 0) + 1 });
       toast(t("composer.posted"), "success");
     } catch (error: unknown) {
       if (error instanceof AxiosError) {
-        if (error.response?.status === 403 && error.response?.data?.error) {
-          toast(error.response.data.error, "error");
+        if (error.response?.status === 403) {
+          const msg =
+            error.response?.data?.message ?? error.response?.data?.error;
+          toast(msg || t("composer.error"), "error");
         } else {
           toast(t("composer.error"), "error");
         }
@@ -263,9 +266,22 @@ const TweetComposer = ({
                   </div>
                 )}
 
-                {!limitReached && remaining !== Infinity && (
-                  <div className="mt-3 text-right text-xs text-gray-500">
-                    {t("composer.remaining", { count: remaining })}
+                {!limitReached && (
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-gray-500">
+                    <span>
+                      {t("composer.currentPlanLabel")}:{" "}
+                      <strong className="text-blue-400">
+                        {t(`pricing.plans.${user.plan || "free"}.name`)}
+                      </strong>
+                    </span>
+                    <span>
+                      {t("composer.tweetLimitLabel")}:{" "}
+                      {planLimit === null ? t("composer.unlimited") : planLimit}
+                    </span>
+                    <span>
+                      {t("composer.remainingTweetsLabel")}:{" "}
+                      {planLimit === null ? t("composer.unlimited") : remaining}
+                    </span>
                   </div>
                 )}
               </div>

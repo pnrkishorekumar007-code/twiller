@@ -23,11 +23,24 @@ const UserSchema = mongoose.Schema({
     enum: ["en", "es", "hi", "pt", "ta", "zh", "fr"],
     default: "en",
   },
-  planRenewedAt: { type: Date, default: Date.now },
+  planRenewedAt: { type: Date, default: null },
   tweetCount: { type: Number, default: 0 },
+  planActivatedAt: { type: Date, default: null },
+  planExpiresAt: { type: Date, default: null },
+  lastQuotaReset: { type: Date, default: Date.now },
+  paymentHistory: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "Subscription" },
+  ],
   following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   followedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tweet" }],
 });
+
+// Subscription/quota lookups: find expired plans, active plans, and
+// scheduled quota resets without collection scans.
+UserSchema.index({ plan: 1 });
+UserSchema.index({ planExpiresAt: 1 });
+UserSchema.index({ lastQuotaReset: 1 });
+UserSchema.index({ paymentHistory: 1 });
 
 export default mongoose.model("User", UserSchema);
