@@ -1,26 +1,24 @@
 import express from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
 import LoginHistory from "../models/loginHistory.js";
 import LoginOtp from "../models/loginOtp.js";
 import { getDeviceInfo, isChrome } from "../utils/deviceInfo.js";
 import { sendLoginOtpEmail } from "../utils/mailer.js";
 import { verifyAuth } from "../middleware/verifyAuth.js";
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
-
 const router = express.Router();
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 
-function isMobileLoginAllowed() {
-  const hour = dayjs().tz("Asia/Kolkata").hour();
-  return hour >= 10 && hour < 13; // 10:00 AM – 12:59:59 PM IST
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out`)), ms)
+    ),
+  ]);
 }
 
 router.post("/login-session", verifyAuth, async (req, res) => {
@@ -28,12 +26,6 @@ router.post("/login-session", verifyAuth, async (req, res) => {
     const user = req.authUser;
 
     const info = getDeviceInfo(req);
-
-    if (info.device === "mobile" && !isMobileLoginAllowed()) {
-      return res
-        .status(403)
-        .json({ blocked: true, reason: "mobile_time_window" });
-    }
 
     if (isChrome(info.browser)) {
       const otp = crypto.randomInt(100000, 999999);
@@ -47,19 +39,30 @@ router.post("/login-session", verifyAuth, async (req, res) => {
         expiresAt: new Date(Date.now() + OTP_TTL_MS),
       });
 
-      // Respond first, send the OTP email in the background so a slow/misconfigured
-      // SMTP connection can't hang the login request (and push the client past its
-      // 45-second ceiling). If delivery fails, it's logged — the OTP is already saved.
-      sendLoginOtpEmail({
-        to: user.email,
-        username: user.username,
-        otp,
-      }).catch((emailErr) => {
+      // Send the OTP email and only report success if delivery actually worked.
+      // Awaiting (with a timeout) surfaces real delivery failures to the client
+      // instead of silently claiming the code was sent while nothing arrives.
+      try {
+        await withTimeout(
+          sendLoginOtpEmail({
+            to: user.email,
+            username: user.username,
+            otp,
+          }),
+          20000,
+          "login OTP email"
+        );
+      } catch (emailErr) {
         console.error(
           `[login-session] Failed to send OTP email to ${user.email}:`,
-          emailErr.message
+          emailErr
         );
-      });
+        await LoginOtp.deleteOne({ user: user._id });
+        return res.status(500).json({
+          error:
+            "We couldn't send the verification code to your email. Please try again in a moment.",
+        });
+      }
 
       return res.status(200).json({ otpRequired: true });
     }

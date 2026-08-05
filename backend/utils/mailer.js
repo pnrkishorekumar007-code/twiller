@@ -29,12 +29,20 @@ function getSmtpTransport() {
 
 async function sendEmail({ to, subject, html }) {
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    await getSmtpTransport().sendMail({
-      from: process.env.SMTP_USER,
-      to,
-      subject,
-      html,
-    });
+    try {
+      const info = await getSmtpTransport().sendMail({
+        from: process.env.SMTP_USER,
+        to,
+        subject,
+        html,
+      });
+      console.log(
+        `[mail] Sent via SMTP (${process.env.SMTP_HOST}) to ${to}: ${subject} (${info.messageId})`
+      );
+    } catch (err) {
+      console.error(`[mail] SMTP send to ${to} failed:`, err);
+      throw err;
+    }
     return;
   }
   const { error } = await resend.emails.send({
@@ -44,8 +52,13 @@ async function sendEmail({ to, subject, html }) {
     html,
   });
   if (error) {
+    console.error(
+      `[mail] Resend send to ${to} failed: ${error.message}` +
+        " — add SMTP_HOST/SMTP_USER/SMTP_PASS or verify a Resend domain to reach non-owner recipients."
+    );
     throw new Error(`Email delivery failed: ${error.message}`);
   }
+  console.log(`[mail] Sent via Resend to ${to}: ${subject}`);
 }
 
 function planDisplayName(plan) {
