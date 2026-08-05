@@ -2,6 +2,7 @@
 
 import {
   createUserWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -240,6 +241,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         "Server response:",
         (err as { response?: { data?: unknown } })?.response?.data
       );
+      const loginCode = (err as { code?: string })?.code;
+      if (
+        loginCode === "auth/invalid-credential" ||
+        loginCode === "auth/user-not-found" ||
+        loginCode === "auth/wrong-password"
+      ) {
+        let methods: string[] | null = null;
+        try {
+          methods = await fetchSignInMethodsForEmail(auth, email);
+        } catch {
+          methods = null;
+        }
+        if (
+          methods &&
+          methods.includes("google.com") &&
+          !methods.includes("password")
+        ) {
+          console.error(
+            `Google-only account detected for ${email} - please sign in with Google.`
+          );
+          throw new Error(t("auth.googleOnly"));
+        }
+      }
       throw err;
     } finally {
       loginFlowRef.current = false;

@@ -65,6 +65,9 @@ router.post("/language/request-otp", verifyAuth, async (req, res) => {
       expiresAt: new Date(Date.now() + OTP_TTL_MS),
       targetLanguage,
     });
+    console.log(
+      `[language] Language OTP generated for ${user.email} (target: ${LANGUAGE_NAMES[targetLanguage] ?? targetLanguage})`
+    );
 
     sendLanguageOtpEmail({
       to: user.email,

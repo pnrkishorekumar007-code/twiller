@@ -109,6 +109,24 @@ $("authForm").addEventListener("submit", async (event) => {
       await auth.signInWithEmailAndPassword(email, password);
     }
   } catch (error) {
+    const code = error && error.code;
+    if (
+      mode === "login" &&
+      (code === "auth/invalid-credential" ||
+        code === "auth/user-not-found" ||
+        code === "auth/wrong-password")
+    ) {
+      let methods = [];
+      try {
+        methods = await auth.fetchSignInMethodsForEmail(email);
+      } catch (e) {}
+      if (methods.includes("google.com") && !methods.includes("password")) {
+        showError(
+          "This account was created using Google Sign-In. Please continue with Google."
+        );
+        return;
+      }
+    }
     showError(friendlyError(error));
   } finally {
     submitBtn.disabled = false;

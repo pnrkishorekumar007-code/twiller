@@ -60,6 +60,9 @@ router.post("/request-otp", verifyAuth, async (req, res) => {
       attempts: 0,
       expiresAt: new Date(Date.now() + OTP_TTL_MS),
     });
+    console.log(
+      `[audioTweet] Audio OTP generated for ${user.email} (expires in ${OTP_TTL_MS / 60000} min)`
+    );
 
     // Respond first, send the OTP email in the background so a slow/misconfigured
     // SMTP connection can't hang the request. Delivery failure is logged server-side.

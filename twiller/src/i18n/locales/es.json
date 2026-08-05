@@ -203,6 +203,7 @@
     "sessionLost": "Sesión perdida. Inicia sesión de nuevo.",
     "noEmail": "No hay un correo asociado a esta cuenta",
     "googleSignedIn": "Sesión iniciada con Google",
+    "googleOnly": "Esta cuenta se creó con el inicio de sesión de Google. Continúa con Google.",
     "mobileBlocked": "El inicio de sesión desde dispositivos móviles solo está permitido entre las 10:00 a. m. y la 1:00 p. m.",
     "serverTimeout": "El servidor tarda demasiado en responder. Inténtalo de nuevo en un momento.",
     "loginFailed": "Error al iniciar sesión. Inténtalo de nuevo.",

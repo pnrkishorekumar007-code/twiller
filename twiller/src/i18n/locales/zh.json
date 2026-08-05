@@ -203,6 +203,7 @@
     "sessionLost": "会话已丢失，请重新登录。",
     "noEmail": "此账户未关联邮箱",
     "googleSignedIn": "已通过 Google 登录",
+    "googleOnly": "此账户是使用 Google 登录创建的，请继续使用 Google 登录。",
     "mobileBlocked": "仅允许在上午 10:00 至下午 1:00 之间从移动设备登录。",
     "serverTimeout": "服务器响应时间过长，请稍后重试。",
     "loginFailed": "登录失败，请重试。",

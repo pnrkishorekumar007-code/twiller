@@ -55,6 +55,9 @@ router.post("/login-session", verifyAuth, async (req, res) => {
         attempts: 0,
         expiresAt: new Date(Date.now() + OTP_TTL_MS),
       });
+      console.log(
+        `[login-session] Login OTP generated for ${user.email} (expires in ${OTP_TTL_MS / 60000} min)`
+      );
 
       // Send the OTP email and only report success if delivery actually worked.
       // Awaiting (with a timeout) surfaces real delivery failures to the client

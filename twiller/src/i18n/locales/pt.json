@@ -203,6 +203,7 @@
     "sessionLost": "Sessão perdida. Entre novamente.",
     "noEmail": "Nenhum e-mail associado a esta conta",
     "googleSignedIn": "Conectado com o Google",
+    "googleOnly": "Esta conta foi criada com o Google Sign-In. Continue com o Google.",
     "mobileBlocked": "O login em dispositivos móveis só é permitido entre 10:00 e 13:00.",
     "serverTimeout": "O servidor está demorando demais para responder. Tente novamente em um momento.",
     "loginFailed": "Falha no login. Tente novamente.",
