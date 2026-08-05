@@ -146,6 +146,10 @@ app.post("/register", async (req, res) => {
     }
     return res.status(201).send(newUser);
   } catch (error) {
+    console.error("[register] Registration failed:", {
+      code: error.code || (error?.errorInfo?.code ?? null),
+      message: error.message,
+    });
     if (
       error.code === "auth/id-token-expired" ||
       error.code === "auth/argument-error"

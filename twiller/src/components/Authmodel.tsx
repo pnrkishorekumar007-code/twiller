@@ -123,6 +123,17 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
       setFormData({ email: '', password: '', username: '', displayName: '', phone: '' });
       setErrors({});
     } catch (error) {
+      console.error("Auth form error:", error);
+      console.error(
+        "Code:",
+        (error as { code?: string })?.code,
+        "| Message:",
+        (error as { message?: string })?.message
+      );
+      console.error(
+        "Server response:",
+        (error as { response?: { data?: unknown } })?.response?.data
+      );
       setErrors({ general: getFirebaseErrorMessage(error, t) });
     }
   };

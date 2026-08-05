@@ -1,16 +1,27 @@
 import express from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 import LoginHistory from "../models/loginHistory.js";
 import LoginOtp from "../models/loginOtp.js";
 import { getDeviceInfo, isChrome } from "../utils/deviceInfo.js";
 import { sendLoginOtpEmail } from "../utils/mailer.js";
 import { verifyAuth } from "../middleware/verifyAuth.js";
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 const router = express.Router();
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
+
+function isMobileLoginAllowed() {
+  const hour = dayjs().tz("Asia/Kolkata").hour();
+  return hour >= 10 && hour < 13; // 10:00 AM – 12:59:59 PM IST
+}
 
 function withTimeout(promise, ms, label) {
   return Promise.race([
@@ -26,6 +37,12 @@ router.post("/login-session", verifyAuth, async (req, res) => {
     const user = req.authUser;
 
     const info = getDeviceInfo(req);
+
+    if (info.device === "mobile" && !isMobileLoginAllowed()) {
+      return res
+        .status(403)
+        .json({ blocked: true, reason: "mobile_time_window" });
+    }
 
     if (isChrome(info.browser)) {
       const otp = crypto.randomInt(100000, 999999);

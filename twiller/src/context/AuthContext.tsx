@@ -229,6 +229,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setAuthStatus("idle");
     } catch (err) {
       setAuthStatus("error");
+      console.error("Firebase Error (login):", err);
+      console.error(
+        "Code:",
+        (err as { code?: string })?.code,
+        "| Message:",
+        (err as { message?: string })?.message
+      );
+      console.error(
+        "Server response:",
+        (err as { response?: { data?: unknown } })?.response?.data
+      );
       throw err;
     } finally {
       loginFlowRef.current = false;
@@ -270,6 +281,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setAuthStatus("idle");
     } catch (err) {
       setAuthStatus("error");
+      console.error("Firebase Error (signup):", err);
+      console.error(
+        "Code:",
+        (err as { code?: string })?.code,
+        "| Message:",
+        (err as { message?: string })?.message
+      );
+      console.error(
+        "Server response:",
+        (err as { response?: { data?: unknown } })?.response?.data
+      );
       throw err;
     } finally {
       setIsLoading(false);
