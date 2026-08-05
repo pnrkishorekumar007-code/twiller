@@ -110,10 +110,8 @@ export default function ProfilePage() {
   const handleLanguageChange = (code: string) => {
     if (!user) return;
     if (code === i18n.language) return;
-    if (code !== "fr" && !user.phone) {
-      toast(t("language.noPhone"), "error");
-      return;
-    }
+    // The server picks the channel: SMS (Firebase Phone Auth) when the account
+    // has a phone, otherwise a Resend email OTP. No phone is required here.
     setPendingLanguage(code);
     setShowLanguageModal(true);
   };

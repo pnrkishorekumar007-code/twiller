@@ -13,6 +13,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { phoneAuth } from "@/context/firebase";
+import { SUPPORTED_LANGUAGES } from "@/i18n/config";
 import LoadingSpinner from "./loading-spinner";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -58,6 +59,8 @@ export default function LanguageOtpModal({
   const [requesting, setRequesting] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  const requestInFlight = useRef(false);
+
   const confirmationRef = useRef<ConfirmationResult | null>(null);
   const verifierRef = useRef<RecaptchaVerifier | null>(null);
 
@@ -86,6 +89,8 @@ export default function LanguageOtpModal({
   };
 
   const requestOtp = async () => {
+    if (requestInFlight.current) return;
+    requestInFlight.current = true;
     setRequesting(true);
     setError("");
     try {
@@ -115,6 +120,7 @@ export default function LanguageOtpModal({
       }
     } finally {
       setRequesting(false);
+      requestInFlight.current = false;
     }
   };
 
@@ -141,6 +147,14 @@ export default function LanguageOtpModal({
       signOut(phoneAuth).catch(() => {});
     };
   }, []);
+
+  const applySwitch = (lang: string) => {
+    updateLanguage(lang);
+    const langName =
+      SUPPORTED_LANGUAGES.find((l) => l.code === lang)?.name ?? lang;
+    toast(t("language.success", { name: langName }), "success");
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,17 +183,13 @@ export default function LanguageOtpModal({
           targetLanguage,
           firebaseToken: token,
         });
-        updateLanguage(res.data?.user?.language ?? targetLanguage);
-        toast(t("language.success"), "success");
-        onClose();
+        applySwitch(res.data?.user?.language ?? targetLanguage);
       } else {
         const res = await axiosInstance.post("/api/language/verify-otp", {
           otp,
           targetLanguage,
         });
-        updateLanguage(res.data?.user?.language ?? targetLanguage);
-        toast(t("language.success"), "success");
-        onClose();
+        applySwitch(res.data?.user?.language ?? targetLanguage);
       }
     } catch (err) {
       const fbKey = getFirebaseErrorKey(err);

@@ -39,14 +39,14 @@ router.post("/language/request-otp", verifyAuth, async (req, res) => {
     // Auth on the client, so no server-side OTP is generated here. The ID token
     // produced after the code is confirmed is verified in /language/verify-otp.
     if (!EMAIL_OTP_LANGUAGES.includes(targetLanguage)) {
-      if (!user.phone) {
-        return res.status(400).json({ error: "no_phone" });
-      }
       const phone = toE164(user.phone);
-      if (!phone) {
-        return res.status(400).json({ error: "no_phone" });
+      if (phone) {
+        return res
+          .status(200)
+          .json({ channel: "phone", otpRequired: true, phone });
       }
-      return res.status(200).json({ channel: "phone", otpRequired: true, phone });
+      // No usable phone number on the account: fall through to the email OTP
+      // channel below so every user can still switch languages.
     }
 
     const otp = crypto.randomInt(100000, 999999);
@@ -91,83 +91,82 @@ router.post("/language/verify-otp", verifyAuth, async (req, res) => {
       return res.status(400).json({ error: "invalid" });
     }
 
-    // Email channel: verify the server-generated OTP against the stored hash.
-    if (EMAIL_OTP_LANGUAGES.includes(targetLanguage)) {
-      const otp = (req.body.otp ?? "").toString().trim();
+    const firebaseToken = (req.body.firebaseToken ?? "").toString().trim();
 
-      if (!/^\d{6}$/.test(otp)) {
-        return res.status(400).json({ error: "invalid" });
+    // Phone channel: the OTP is verified by Firebase client-side; here we trust
+    // the resulting ID token. Firebase only issues tokens with a phone_number
+    // claim after the SMS code was entered correctly, and the phone must match
+    // the number stored on the account.
+    if (firebaseToken) {
+      if (!user.phone) {
+        return res.status(400).json({ error: "no_phone" });
       }
 
-      const otpDoc = await LanguageOtp.findOne({ user: user._id });
-
-      if (!otpDoc || otpDoc.expiresAt.getTime() < Date.now()) {
-        if (otpDoc) await LanguageOtp.deleteOne({ _id: otpDoc._id });
-        return res.status(400).json({ error: "expired" });
+      const app = getFirebaseAdmin();
+      if (!app) {
+        console.error(
+          "Language change blocked: Firebase Admin SDK is not initialized (FIREBASE_SERVICE_ACCOUNT_KEY missing)."
+        );
+        return res.status(500).json({
+          error: "Something went wrong. Please try again later.",
+        });
       }
 
-      if (otpDoc.targetLanguage !== targetLanguage) {
-        return res.status(400).json({ error: "expired" });
+      let decoded;
+      try {
+        decoded = await getAuth(app).verifyIdToken(firebaseToken);
+      } catch (error) {
+        console.error("Phone auth token verification failed:", error.message);
+        return res.status(401).json({ error: "invalid" });
       }
 
-      const match = await bcrypt.compare(otp, otpDoc.otpHash);
-
-      if (!match) {
-        otpDoc.attempts += 1;
-        if (otpDoc.attempts >= MAX_OTP_ATTEMPTS) {
-          await LanguageOtp.deleteOne({ _id: otpDoc._id });
-          return res.status(429).json({ error: "tooMany" });
-        }
-        await otpDoc.save();
+      const verifiedPhone = normalizePhone(decoded.phone_number);
+      if (!verifiedPhone || verifiedPhone !== user.phone) {
         return res.status(400).json({ error: "incorrect" });
       }
 
       user.language = targetLanguage;
       await user.save();
 
-      await LanguageOtp.deleteOne({ _id: otpDoc._id });
-
       return res.status(200).json({ success: true, user });
     }
 
-    // Phone channel: the OTP is verified by Firebase client-side; here we trust
-    // the resulting ID token. Firebase only issues tokens with a phone_number
-    // claim after the SMS code was entered correctly, and the phone must match
-    // the number stored on the account.
-    if (!user.phone) {
-      return res.status(400).json({ error: "no_phone" });
-    }
+    // Email channel: verify the server-generated OTP against the stored hash.
+    // Works for every supported language (French by default, plus the fallback
+    // for accounts without a usable phone number).
+    const otp = (req.body.otp ?? "").toString().trim();
 
-    const firebaseToken = (req.body.firebaseToken ?? "").toString().trim();
-    if (!firebaseToken) {
+    if (!/^\d{6}$/.test(otp)) {
       return res.status(400).json({ error: "invalid" });
     }
 
-    const app = getFirebaseAdmin();
-    if (!app) {
-      console.error(
-        "Language change blocked: Firebase Admin SDK is not initialized (FIREBASE_SERVICE_ACCOUNT_KEY missing)."
-      );
-      return res.status(500).json({
-        error: "Something went wrong. Please try again later.",
-      });
+    const otpDoc = await LanguageOtp.findOne({ user: user._id });
+
+    if (!otpDoc || otpDoc.expiresAt.getTime() < Date.now()) {
+      if (otpDoc) await LanguageOtp.deleteOne({ _id: otpDoc._id });
+      return res.status(400).json({ error: "expired" });
     }
 
-    let decoded;
-    try {
-      decoded = await getAuth(app).verifyIdToken(firebaseToken);
-    } catch (error) {
-      console.error("Phone auth token verification failed:", error.message);
-      return res.status(401).json({ error: "invalid" });
+    if (otpDoc.targetLanguage !== targetLanguage) {
+      return res.status(400).json({ error: "expired" });
     }
 
-    const verifiedPhone = normalizePhone(decoded.phone_number);
-    if (!verifiedPhone || verifiedPhone !== user.phone) {
+    const match = await bcrypt.compare(otp, otpDoc.otpHash);
+
+    if (!match) {
+      otpDoc.attempts += 1;
+      if (otpDoc.attempts >= MAX_OTP_ATTEMPTS) {
+        await LanguageOtp.deleteOne({ _id: otpDoc._id });
+        return res.status(429).json({ error: "tooMany" });
+      }
+      await otpDoc.save();
       return res.status(400).json({ error: "incorrect" });
     }
 
     user.language = targetLanguage;
     await user.save();
+
+    await LanguageOtp.deleteOne({ _id: otpDoc._id });
 
     return res.status(200).json({ success: true, user });
   } catch (error) {

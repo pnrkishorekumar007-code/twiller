@@ -102,13 +102,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const updateLanguage = (lang: string) => {
-    setUser((prev) => {
-      if (!prev) return prev;
-      const updated = { ...prev, language: lang };
-      localStorage.setItem("twitter-user", JSON.stringify(updated));
-      applyLanguage(lang);
-      return updated;
-    });
+    setUser((prev) => (prev ? { ...prev, language: lang } : prev));
+    if (user) {
+      localStorage.setItem(
+        "twitter-user",
+        JSON.stringify({ ...user, language: lang })
+      );
+    }
+    // i18n side effects must live outside the state updater (updaters must be
+    // pure and may be re-run by React), so apply the language unconditionally.
+    applyLanguage(lang);
   };
 
   const gateLogin = async (): Promise<
