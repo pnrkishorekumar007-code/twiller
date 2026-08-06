@@ -1,17 +1,26 @@
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
 
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-// keep your credentials 
 const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: "",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "",
 };
 
+const isConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+if (!isConfigured && typeof window !== "undefined") {
+  console.warn(
+    "Firebase is not configured. Set the NEXT_PUBLIC_FIREBASE_* environment variables."
+  );
+}
+
+const app: ReturnType<typeof initializeApp> | null = isConfigured
+  ? getApps()[0] ?? initializeApp(firebaseConfig)
+  : null;
+
+export const auth: Auth | null = app ? getAuth(app) : null;
 export default app;

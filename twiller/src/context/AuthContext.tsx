@@ -67,7 +67,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const requireAuth = () => {
+    if (!auth) {
+      throw new Error(
+        "Firebase is not configured. Set the NEXT_PUBLIC_FIREBASE_* environment variables."
+      );
+    }
+    return auth;
+  };
+
   useEffect(() => {
+    if (!auth) {
+      setIsLoading(false);
+      return;
+    }
     // Check for existing session
     const unsubcribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser?.email) {
@@ -94,8 +107,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
+    const firebaseAuth = requireAuth();
     // Mock authentication - in real app, this would call an API
-    const usercred = await signInWithEmailAndPassword(auth, email, password);
+    const usercred = await signInWithEmailAndPassword(firebaseAuth, email, password);
     const firebaseuser = usercred.user;
     const res = await axiosInstance.get("/loggedinuser", {
       params: { email: firebaseuser.email },
@@ -122,9 +136,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     displayName: string
   ) => {
     setIsLoading(true);
+    const firebaseAuth = requireAuth();
     // Mock authentication - in real app, this would call an API
     const usercred = await createUserWithEmailAndPassword(
-      auth,
+      firebaseAuth,
       email,
       password
     );
@@ -153,7 +168,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const logout = async () => {
     setUser(null);
-    await signOut(auth);
+    if (auth) {
+      await signOut(auth);
+    }
     localStorage.removeItem("twitter-user");
   };
 
@@ -214,8 +231,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoading(true);
 
     try {
+      const firebaseAuth = requireAuth();
       const googleauthprovider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, googleauthprovider);
+      const result = await signInWithPopup(firebaseAuth, googleauthprovider);
       const firebaseuser = result.user;
 
       if (!firebaseuser?.email) {
