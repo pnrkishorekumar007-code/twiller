@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
 import LoadingSpinner from './loading-spinner';
+import OTPVerification from './OTPVerification';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
@@ -25,6 +26,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
   const { login, signup, isLoading } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState<'form' | 'otp'>('form');
+  const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otpPurpose, setOtpPurpose] = useState<'signup' | 'login'>('signup');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -32,6 +37,12 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     displayName: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setMode(initialMode);
+    setStep('form');
+    setErrors({});
+  }, [initialMode]);
 
   if (!isOpen) return null;
 
@@ -42,6 +53,11 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email';
+    }
+
+    if (mode === 'login' && loginMethod === 'otp') {
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
     }
 
     if (!formData.password.trim()) {
@@ -74,16 +90,50 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
 
     try {
       if (mode === 'login') {
+        if (loginMethod === 'otp') {
+          setOtpEmail(formData.email);
+          setOtpPurpose('login');
+          setStep('otp');
+          return;
+        }
         await login(formData.email, formData.password);
+        onClose();
+        resetForm();
       } else {
-        await signup(formData.email, formData.password, formData.username, formData.displayName);
+        setOtpEmail(formData.email);
+        setOtpPurpose('signup');
+        setStep('otp');
       }
-      onClose();
-      setFormData({ email: '', password: '', username: '', displayName: '' });
-      setErrors({});
-    } catch (error) {
+    } catch {
       setErrors({ general: 'Authentication failed. Please try again.' });
     }
+  };
+
+  const handleOtpSuccess = async () => {
+    if (otpPurpose === 'signup') {
+      await signup(
+        formData.email,
+        formData.password,
+        formData.username,
+        formData.displayName
+      );
+    }
+    onClose();
+    resetForm();
+  };
+
+  const handleOtpCancel = () => {
+    setStep('form');
+    setOtpEmail('');
+    setErrors({});
+  };
+
+  const resetForm = () => {
+    setFormData({ email: '', password: '', username: '', displayName: '' });
+    setErrors({});
+    setStep('form');
+    setOtpEmail('');
+    setLoginMethod('password');
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -97,6 +147,9 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
     setMode(mode === 'login' ? 'signup' : 'login');
     setErrors({});
     setFormData({ email: '', password: '', username: '', displayName: '' });
+    setStep('form');
+    setOtpEmail('');
+    setLoginMethod('password');
   };
 
   return (
@@ -116,11 +169,27 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
               <TwitterLogo size="xl" className="text-white" />
             </div>
             <CardTitle className="text-2xl font-bold">
-              {mode === 'login' ? 'Sign in to X' : 'Create your account'}
+              {step === 'otp'
+                ? mode === 'login'
+                  ? 'Check your email'
+                  : 'Verify your email'
+                : mode === 'login'
+                ? 'Sign in to X'
+                : 'Create your account'}
             </CardTitle>
           </div>
         </CardHeader>
 
+        {step === 'otp' ? (
+          <CardContent>
+            <OTPVerification
+              email={otpEmail}
+              purpose={otpPurpose}
+              onSuccess={handleOtpSuccess}
+              onCancel={handleOtpCancel}
+            />
+          </CardContent>
+        ) : (
         <CardContent className="space-y-6">
           {errors.general && (
             <div className="bg-red-900/20 border border-red-800 rounded-lg p-3 text-red-400 text-sm">
@@ -190,33 +259,58 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-white">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  className="pl-10 pr-10 bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
-                  disabled={isLoading}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
+            {!(mode === 'login' && loginMethod === 'otp') && (
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-white">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    className="pl-10 pr-10 bg-transparent border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
+                    disabled={isLoading}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {errors.password && (
+                  <p className="text-red-400 text-sm">{errors.password}</p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-red-400 text-sm">{errors.password}</p>
-              )}
-            </div>
+            )}
+
+            {mode === 'login' && (
+              <div className="flex items-center justify-between rounded-full border border-gray-600 px-1 py-1">
+                {(['password', 'otp'] as const).map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
+                      loginMethod === method
+                        ? 'bg-gray-100 text-black'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                    onClick={() => {
+                      setLoginMethod(method);
+                      setErrors({});
+                    }}
+                    disabled={isLoading}
+                  >
+                    {method === 'password' ? 'Use password' : 'Use email code'}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <Button
               type="submit"
@@ -229,7 +323,11 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                   <span>{mode === 'login' ? 'Signing in...' : 'Creating account...'}</span>
                 </div>
               ) : (
-                mode === 'login' ? 'Sign in' : 'Create account'
+                mode === 'login'
+                  ? loginMethod === 'otp'
+                    ? 'Send code'
+                    : 'Sign in'
+                  : 'Create account'
               )}
             </Button>
           </form>
@@ -261,6 +359,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
             </div>
           )}
         </CardContent>
+        )}
       </Card>
     </div>
   );

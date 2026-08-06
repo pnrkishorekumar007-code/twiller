@@ -7,6 +7,7 @@ const UserSchema = mongoose.Schema({
   bio: { type: String, default: "" },
   location: { type: String, default: "" },
   website: { type: String, default: "" },
+  verified: { type: Boolean, default: true },
   joinedDate: { type: Date, default: Date.now() },
 });
 

@@ -12,7 +12,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { auth } from "./firebase";
 import axiosInstance from "../lib/axiosInstance";
 
-interface User {
+export interface User {
   _id: string;
   username: string;
   displayName: string;
@@ -43,6 +43,12 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   googlesignin: () => void;
+  sendOtp: (email: string, purpose: "signup" | "login") => Promise<void>;
+  verifyOtp: (
+    email: string,
+    code: string,
+    purpose: "signup" | "login"
+  ) => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -179,6 +185,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     setIsLoading(false);
   };
+  const sendOtp = async (email: string, purpose: "signup" | "login") => {
+    await axiosInstance.post("/send-otp", { email, purpose });
+  };
+
+  const verifyOtp = async (
+    email: string,
+    code: string,
+    purpose: "signup" | "login"
+  ): Promise<User | null> => {
+    const res = await axiosInstance.post("/verify-otp", {
+      email,
+      code,
+      purpose,
+    });
+
+    if (purpose === "login" && res.data.user) {
+      const userData: User = res.data.user;
+      setUser(userData);
+      localStorage.setItem("twitter-user", JSON.stringify(userData));
+      return userData;
+    }
+
+    return res.data?.user ?? null;
+  };
+
   const googlesignin = async () => {
     setIsLoading(true);
 
@@ -234,6 +265,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         logout,
         isLoading,
         googlesignin,
+        sendOtp,
+        verifyOtp,
       }}
     >
       {children}

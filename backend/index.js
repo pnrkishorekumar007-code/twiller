@@ -4,6 +4,8 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import User from "./models/user.js";
 import Tweet from "./models/tweet.js";
+import Otp from "./models/otp.js";
+import { sendOtpEmail } from "./services/otpEmail.js";
 dotenv.config();
 const app = express();
 app.use(cors());
@@ -27,6 +29,112 @@ mongoose
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err.message);
   });
+
+const OTP_LENGTH = 6;
+const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_ATTEMPTS = 5;
+
+const generateOtp = () => {
+  let code = "";
+  for (let i = 0; i < OTP_LENGTH; i++) {
+    code += Math.floor(Math.random() * 10);
+  }
+  return code;
+};
+
+// Send OTP
+app.post("/send-otp", async (req, res) => {
+  try {
+    const { email, purpose } = req.body;
+
+    if (!email || !purpose) {
+      return res.status(400).send({ error: "Email and purpose are required" });
+    }
+    if (!["signup", "login"].includes(purpose)) {
+      return res.status(400).send({ error: "Invalid purpose" });
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).send({ error: "Please enter a valid email" });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
+    if (purpose === "signup") {
+      const existingUser = await User.findOne({ email: normalizedEmail });
+      if (existingUser) {
+        return res.status(400).send({ error: "An account with this email already exists" });
+      }
+    }
+
+    // Replace any previous OTP for this email + purpose
+    await Otp.deleteMany({ email: normalizedEmail, purpose });
+
+    const code = generateOtp();
+    const otp = new Otp({
+      email: normalizedEmail,
+      code,
+      purpose,
+      expiresAt: new Date(Date.now() + OTP_TTL_MS),
+    });
+    await otp.save();
+
+    await sendOtpEmail(normalizedEmail, code, purpose);
+
+    return res.status(200).send({
+      message: "OTP sent successfully",
+      expiresIn: OTP_TTL_MS,
+    });
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
+
+// Verify OTP
+app.post("/verify-otp", async (req, res) => {
+  try {
+    const { email, code, purpose } = req.body;
+
+    if (!email || !code || !purpose) {
+      return res.status(400).send({ error: "Email, code and purpose are required" });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const otp = await Otp.findOne({ email: normalizedEmail, purpose });
+
+    if (!otp) {
+      return res.status(400).send({ error: "No OTP found. Please request a new code." });
+    }
+
+    if (otp.expiresAt < new Date()) {
+      await Otp.deleteOne({ _id: otp._id });
+      return res.status(400).send({ error: "OTP has expired. Please request a new code." });
+    }
+
+    if (otp.code !== String(code).trim()) {
+      otp.attempts += 1;
+      if (otp.attempts >= MAX_ATTEMPTS) {
+        await Otp.deleteOne({ _id: otp._id });
+        return res.status(400).send({ error: "Too many failed attempts. Please request a new code." });
+      }
+      await otp.save();
+      return res.status(400).send({ error: "Invalid OTP code. Please try again." });
+    }
+
+    await Otp.deleteOne({ _id: otp._id });
+
+    if (purpose === "login") {
+      const user = await User.findOne({ email: normalizedEmail });
+      if (!user) {
+        return res.status(400).send({ error: "No account found with this email" });
+      }
+      return res.status(200).send({ verified: true, user });
+    }
+
+    return res.status(200).send({ verified: true });
+  } catch (error) {
+    return res.status(400).send({ error: error.message });
+  }
+});
 
 //Register
 app.post("/register", async (req, res) => {
